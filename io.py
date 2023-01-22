@@ -1,25 +1,34 @@
 from machine import Pin
-import _thread
 import time
 
-def rd(pin_number, val):
-    in_pin = Pin(pin_number, Pin.IN)
-    prev_time = time.time()
-    while True:
-       if(time.time()-prev_time > 1):
-           prev_time = time.time()
-           val = in_pin.value()
+# pin definitions
+led = Pin(2, Pin.OUT)
+but = Pin(0, Pin.IN)
+out = Pin(15, Pin.OUT)
 
-def read(pin_number, val):
-    _thread.start_new_thread(rd(pin_number))
 
-def wr(pin_number, val):
-    out_pin = Pin(pin_number, Pin.OUT)
-    prev_time = time.time()
+def loop():
+    #initialize
+    led_val = 1
+    but_val = 0
+    # start time for individual pins
+    led_start = 0
+    but_start = 0
+    out_start = 0
+    
     while True:
-       if(not out_pin.value()-val):
-           prev_time = time.time()
-           in_pin.value(val)
-        
-def write(pin_number, val):
-    _thread.start_new_thread(wr(pin_number, val))
+        time_now = time.time_us()
+        print (time_now)
+        if (time_now - led_start > 1):
+            print ("led val loop")
+            led.value(led_val)
+            led_start = time_now
+            led_val = not led_val
+        if (time_now - but_start > 1):
+            but_val = but.value()
+            but_start = time_now
+        if (time_now - out_start > 1):
+            out.value(but_val)
+            out_start = time_now
+
+loop()
