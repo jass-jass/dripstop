@@ -14,9 +14,10 @@ print(i2c_address)
 
 #data_pin.value(1)
 #buf = ''
-buf = bytearray(8)
+buf = bytearray(2)
 
 while True:
     if (not int_pin.value()):
         i2c_device.readfrom_into(i2c_address[0], buf)
         print(buf)
+        sleep(1)
