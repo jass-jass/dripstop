@@ -1,0 +1,3 @@
+Two timer groups. Each has two general purpose timers. They are all 64-bit generic timers
+based on 16-bit pre-scalers and 64-bit up / down counters which are capable of being 
+auto-reloaded. Micropython also supports virtual timers (Id: -1). 
