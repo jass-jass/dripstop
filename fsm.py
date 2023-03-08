@@ -14,7 +14,8 @@ def blink_green():
         ledg.off()
         sleep(1)
         
-# hardware interrupts pass a pin as an argument to the ISR
+# hardware interrupts pass a pin as an argument to the ISR. 
+#   it indicates which pin caused the interrupt
 # ISR difficulty in handling core 2 resources 
 # in current code, control doesn't exit ISR
 def ISR_blink(int_pin):
