@@ -17,7 +17,7 @@ def blink_green():
 # hardware interrupts pass a pin as an argument to the ISR. 
 #   it indicates which pin caused the interrupt
 # ISR difficulty in handling core 2 resources 
-# in current code, control doesn't exit ISR
+# The interrupt executes multiple times due to debounce of the switch
 def ISR_blink(int_pin):
     ledr.on()
     sleep(5)
