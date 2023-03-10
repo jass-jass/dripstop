@@ -13,6 +13,9 @@ led_5 = Pin(5, Pin.OUT)
 
 async def input_state():
     while True:
+        event = asyncio.wait_for(word = input("enter hi or bye"), timeout= 10.0)
+        if event:
+            return display
 
 
 async def hi():
@@ -28,6 +31,7 @@ async def hi():
     await uasyncio.sleep(1)
     led_19.off()
     led_23.off()
+    return input_state
 
 
 async def bye():
@@ -50,3 +54,23 @@ async def bye():
     await uasyncio.sleep(1)
     led_21.off()
     led_22.off()
+    return input_state
+
+
+async def display(word):
+    while True:
+        if word == 'hi'
+            return hi
+        else
+            return bye
+
+
+async def run_state_machine():
+    state = input_state
+    while True:
+        state = await state()
+
+
+loop = asyncio.get_event_loop()
+loop.create_task(run_state_machine())
+loop.run_forever()
