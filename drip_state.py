@@ -1,22 +1,26 @@
-from machine import Pin, PWM
-from time import sleep
-import _thread
+from machine import Pin, Timer
+import time 
+
+
+## PWM Generate
+timer = Timer(0)
+pwm_out = Pin(23, Pin.OUT)
+
+def pwm_off(timer):
+    timer.init(period=5000, mode=Timer.ONE_SHOT, callback=pwm_on)
+    pwm_out.off()
+
+def pwm_on(timer):
+    timer.init(period=1000, mode=Timer.ONE_SHOT, callback=pwm_off)
+    pwm_out.on()
+
+###
+
+## PWM Read
+read_timer = Timer(1)
 
 
 
-def pulse_generate():
-    pulse_pin = Pin(22, Pin.OUT)
-    pulse = PWM(pulse_pin)
-    pulse.freq(700)
-    while True:
-        for i in range(1024):
-            pulse.duty(i)
-            sleep(2)
-
-_thread.start_new_thread(pulse_generate, ())
-
-
-
-read = Pin(34, Pin.IN)
-
-def pulse_read():
+while True:
+    start = time.time()
+    timer.init(period=1000, mode=Timer.ONE_SHOT, callback=pwm_off)
