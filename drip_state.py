@@ -62,7 +62,10 @@ data.irq(handler = timer_on, trigger = Pin.IRQ_RISING)
 ###
 
 while True:
+    print('yaay')
+    time.sleep(1)
+    '''
     on_time = on_sum * 2 / count
     off_time = off_sum *2 / count
     frequency = on_time + off_time
-    print("on ", on_time, "off ", off_time, "frequency ", (1/frequency))
+    print("on ", on_time, "off ", off_time, "frequency ", (1/frequency))'''
