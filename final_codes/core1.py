@@ -22,6 +22,11 @@ i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 
 
 
+### Variables ###
+flag = 0
+
+
+
 ### Constants ###
 # Status LED
 status_power_on = const()
@@ -39,6 +44,18 @@ def power_on():
     # HMI with LCD updation
     await # wait for start button to be pressed
     
+    
+### start state ###
+def start():
+    # I can't live anymore with a family like this
+    
+    
+### compare and adjust state ###
+def comp_n_adjust():
+    
+
+### Idle state ###
+def idle():
 
 async def run_state_machine():
     state = power_on
