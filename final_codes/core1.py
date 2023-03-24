@@ -47,7 +47,7 @@ def power_on():
     
 ### start state ###
 def start():
-    # I can't live anymore with a family like this
+    # 
     
     
 ### compare and adjust state ###
