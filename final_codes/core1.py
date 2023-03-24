@@ -24,15 +24,20 @@ i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 
 ### Variables ###
 flag = 0
+tube_change = 0
+drip_rate = 0
 
 
 
 ### Constants ###
 # Status LED
 status_power_on = const()
+status_adjust = const()
+status_calibrate = const()
 
 # Servo motor
 servo_home = const()
+servo_close = const()
 
 
 
@@ -40,18 +45,27 @@ servo_home = const()
 def power_on():
     led_status.value(status_power_on)
     # lcd display configure
-    servo.duty(servo_home)
+    if tube_change:
+        servo.duty(servo_home)
     # HMI with LCD updation
     await # wait for start button to be pressed
     
     
 ### start state ###
 def start():
-    # 
+    servo.duty(servo_close)
+    led_status.value(status_calibrate)
+    drip_rate = # calculate drip rate
+    # check for current rate and calculated 
+    # switch to idle or adjust acc
     
     
 ### compare and adjust state ###
 def comp_n_adjust():
+    while True:
+        # ticks with interrupt
+        if drip_rate = freq_ticks:
+            fl
     
 
 ### Idle state ###
