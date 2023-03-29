@@ -25,9 +25,10 @@ i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 ### Variables ###
 tube_change = 0
 drip_rate = 0
+hmi_status = 0x00
 
 ### Flags ###
-flag = 0
+load_cell_flag = 0
 count_flag = 0
 
 ### Constants ###
@@ -49,7 +50,13 @@ servo_step = 0
 #######################################################################
                              '''ISRs'''
 #######################################################################
-def 
+def HMI_ISR():
+  global load_cell_flag
+  global input_array
+  if load_cell_flag:
+    # disable interrupt
+    # return to idle
+  elif input_array xor :   # data from pcf
 
 
 #######################################################################
@@ -60,7 +67,7 @@ def
                             '''STATES'''
 #######################################################################
 ### power on state ###
-def power_on():
+async def power_on():
     led_status.value(status_power_on)
     # lcd display configure
     if tube_change:
@@ -70,7 +77,7 @@ def power_on():
     
     
 ### start state ###
-def start():
+async def start():
     servo.duty(servo_close)
     led_status.value(status_calibrate)
     drip_rate = # calculate drip rate
@@ -79,7 +86,7 @@ def start():
     
     
 ### compare and adjust state ###
-def comp_n_adjust():
+async def comp_n_adjust():
     servo_step = 0
     while True:
         # ticks with interrupt
@@ -94,10 +101,11 @@ def comp_n_adjust():
     
 
 ### Idle state ###
-def idle():
+async def idle():
     
     
 #######################################################################
+
 
 
 async def run_state_machine():
@@ -105,7 +113,22 @@ async def run_state_machine():
     while True:
         state = await state()
 
+       
+### thread safe flag allows interrupts and threads to run along with 
+### tasks of the fsm
+tsf = uasyncio.ThreadSafeFlag()
+
+def set_tsf(_):
+    tsf.set()
+
+async def schedule_interrupt():
+    while True:
+        await tsf.wait()
+        HMI_ISR()
+
+pdf_int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
 
 loop = uasyncio.get_event_loop()
-loop.create_task(run_state_machine())
+loop.create_task(run_state_machine())    # FSM for main tasks
+loop.create_task(schedule_interrupt())   # FSM for interrupts
 loop.run_forever()
