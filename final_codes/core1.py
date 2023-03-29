@@ -102,6 +102,7 @@ async def comp_n_adjust():
 
 ### Idle state ###
 async def idle():
+    await tsf.wait()  # do nothing and wait for irq
     
     
 #######################################################################
@@ -120,11 +121,11 @@ tsf = uasyncio.ThreadSafeFlag()
 
 def set_tsf(_):
     tsf.set()
+    HMI_ISR()
 
 async def schedule_interrupt():
     while True:
         await tsf.wait()
-        HMI_ISR()
 
 pdf_int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
 
