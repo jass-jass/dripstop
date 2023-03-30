@@ -23,7 +23,7 @@ load_cell = HX711(d_out = 4, pd_sck = 18, channel = 1)  # channel A gain 128
 i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 
 ### Variables ###
-tube_change = 0
+tube_change = 1
 drip_rate = 0
 hmi_status = 0x00
 
@@ -72,6 +72,7 @@ async def power_on():
     # lcd display configure
     if tube_change:
         servo.duty(servo_home)
+        tube_change = 0
     # HMI with LCD updation
     await # wait for start button to be pressed
     
