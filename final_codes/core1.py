@@ -42,6 +42,9 @@ servo_home = const()
 servo_close = const()
 servo_step = 0
 
+# FSM 
+state = power_on
+
 
 #######################################################################
 
@@ -68,6 +71,7 @@ def HMI_ISR():
 #######################################################################
 ### power on state ###
 async def power_on():
+    global state
     led_status.value(status_power_on)
     # lcd display configure
     if tube_change:
@@ -79,6 +83,7 @@ async def power_on():
     
 ### start state ###
 async def start():
+    global state
     servo.duty(servo_close)
     led_status.value(status_calibrate)
     drip_rate = # calculate drip rate
@@ -88,8 +93,9 @@ async def start():
     
 ### compare and adjust state ###
 async def comp_n_adjust():
+    global state
     servo_step = 0
-    while True:
+    while state == comp_n_adjust:
         # ticks with interrupt
         if drip_rate = freq_ticks:
             count_flag = count_flag + 1
@@ -103,15 +109,16 @@ async def comp_n_adjust():
 
 ### Idle state ###
 async def idle():
-    await tsf.wait()  # do nothing and wait for irq
-    
+    global state
+    while state == idle:
+        pass
     
 #######################################################################
 
 
 
 async def run_state_machine():
-    state = power_on
+    global state
     while True:
         state = await state()
 
