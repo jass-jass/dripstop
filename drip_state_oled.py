@@ -74,7 +74,7 @@ while True:
     arr_size = 10
     while arr_size:
         if count == 0:
-            t_period = ( sum_time / samples ) /1000 / 0.9
+            t_period = ( sum_time / samples ) /1000 / 0.9   # 0.9 correction because we get a 10% error on samples
             if t_period:
                 arr_freq.append(1000/t_period)
             else:
