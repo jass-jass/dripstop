@@ -11,14 +11,15 @@ timer = Timer(1)
 pwm_out = Pin(23, Pin.OUT)
 
 def pwm_off(timer):
-    timer.init(period=7, mode=Timer.ONE_SHOT, callback=pwm_on)
+    timer.init(period=20, mode=Timer.ONE_SHOT, callback=pwm_on)
     pwm_out.off()
 
 def pwm_on(timer):
-    timer.init(period=3, mode=Timer.ONE_SHOT, callback=pwm_off)
+    timer.init(period=50, mode=Timer.ONE_SHOT, callback=pwm_off)
     pwm_out.on()
 
-timer.init(period=1, mode=Timer.ONE_SHOT, callback=pwm_on)
+timer.init(period=20, mode=Timer.ONE_SHOT, callback=pwm_on)
+
 
 
 ### OLED display  
@@ -47,14 +48,16 @@ prev_time = 0
 curr_time = 0
 sum_time = 0
 
+oled_disp('address', addr[0])
 
-def timer_on(data):
+
+def timer_period(data):
     global prev_time
     global curr_time
     global count
     global sum_time
     curr_time = time.ticks_us()
-    if count <= samples:
+    if count < samples:
         sum_time = sum_time + curr_time - prev_time
     count = count - 1
     prev_time = curr_time
@@ -63,7 +66,7 @@ def timer_on(data):
 
 
 data = Pin(34, Pin.IN)
-data.irq(handler = timer_on, trigger = Pin.IRQ_FALLING)
+data.irq(handler = timer_period, trigger = Pin.IRQ_FALLING)
 
 
 while True:
@@ -71,9 +74,9 @@ while True:
     arr_size = 10
     while arr_size:
         if count == 0:
-            t_period = ( on / samples )
+            t_period = ( sum_time / samples ) /1000 / 0.9
             if t_period:
-                arr_freq.append(1/t_period)
+                arr_freq.append(1000/t_period)
             else:
                 pass
             oled_disp('period', t_period)
@@ -81,10 +84,9 @@ while True:
             sum_time = 0
             count = samples
             if arr_size:
-                data.irq(handler = timer_off, trigger = Pin.IRQ_FALLING)
+                data.irq(handler = timer_period, trigger = Pin.IRQ_FALLING)
     ##############################################################
     l = sorted(arr_freq)
     freq = l[int(len(l)/ 2)]
     oled_disp('freq', freq)
-    time.sleep(2)
-    data.irq(handler = timer_off, trigger = Pin.IRQ_RISING)
+    data.irq(handler = timer_period, trigger = Pin.IRQ_FALLING)
