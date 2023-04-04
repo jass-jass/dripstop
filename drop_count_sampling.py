@@ -60,27 +60,30 @@ while True:
         flag = 2
         temp = 0
         arr = []
-        while temp != data.value():
-            pass
-        while True:
+        try:
+            while temp != data.value():
+                pass
             while True:
-                curr_time = time.ticks_us()
-                if curr_time - prev_time > 1000:
-                    read = data.value()
+                while True:
+                    curr_time = time.ticks_us()
+                    if curr_time - prev_time > 250:
+                        read = data.value()
+                        break
+                prev_time = curr_time
+                if read ^ temp:
+                    flag = flag - 1
+                    temp = read
+                if flag:
+                    arr.append(read)
+                else:
+                    f = len(arr) * 0.25 #/ 1.85
+                    oled_disp('period', f)
+                    freq.append(f) 
+                    freq_size = freq_size - 1
                     break
-            prev_time = curr_time
-            if read ^ temp:
-                flag = flag - 1
-                temp = read
-            if flag:
-                arr.append(read)
-            else:
-                f = len(arr)#/ 1.85
-                oled_disp(f)
-                freq.append(f) 
-                freq_size = freq_size - 1
-                break
+        except:
+            oled_disp('meow', 1)
+            time.sleep(2)
     l = sorted(freq)
     period = l[int(len(l)/ 2)]
-    oled_disp('period', (1000/period))
-
+    oled_disp('freq', (1000/period))
