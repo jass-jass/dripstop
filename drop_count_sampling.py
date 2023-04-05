@@ -73,6 +73,15 @@ while True:
                 if read ^ temp:
                     flag = flag - 1
                     temp = read
+                if data_size >  3000:
+                    if read:
+                        t = -2
+                    else:
+                        t = -1
+                    oled_disp('period', t)
+                    freq.append(t) 
+                    freq_size = freq_size - 1
+                    break
                 if flag:
                     data_size = data_size + 1 
                 else:
