@@ -59,7 +59,7 @@ while True:
     while freq_size:
         flag = 2
         temp = 0
-        arr = []
+        data_size = 0
         try:
             while temp != data.value():
                 pass
@@ -74,11 +74,11 @@ while True:
                     flag = flag - 1
                     temp = read
                 if flag:
-                    arr.append(read)
+                    data_size = data_size + 1 
                 else:
-                    f = len(arr) * 0.25 #/ 1.85
-                    oled_disp('period', f)
-                    freq.append(f) 
+                    t = data_size * 0.25 #/ 1.85
+                    oled_disp('period', t)
+                    freq.append(t) 
                     freq_size = freq_size - 1
                     break
         except:
