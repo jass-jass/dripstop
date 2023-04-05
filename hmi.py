@@ -21,15 +21,24 @@ data = []
 
 def poll(s):
     global data
-    data = []
+    arr = []
+    ones = 0
+    print('irq')
     for i in range(8):
-        data.append(pcf.pin(i))
+        temp = pcf.pin(i)
+        print(temp)
+        arr.append(temp)
+        if temp:
+            ones = ones + 1
+    print(ones)
+    if ones != 7:
+        return
+    data = arr
+    print(data)
 
 
 int_pcf.irq(trigger = Pin.IRQ_FALLING, handler = poll)
 
 while True:
-    #lcd.move_to(0,0)
+    lcd.move_to(0,0)
     lcd.putstr(str(data))
-    sleep(1)
-    lcd.clear()
