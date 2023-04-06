@@ -1,6 +1,6 @@
 from time import sleep
 from machine import Pin, PWM, Timer, freq, I2C
-import servo, sh1106, time, math, machine
+import servo, time, math, machine
 from lcd_api import LcdApi
 from i2c_lcd import I2cLcd
 
@@ -15,7 +15,7 @@ i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
 addr = i2c.scan()
 totalRows = 4
 totalColumns = 20
-lcd = I2cLcd(i2c, I2C_ADDR, totalRows, totalColumns)
+lcd = I2cLcd(i2c, addr[0], totalRows, totalColumns)
 # ldr
 data = Pin(34, Pin.IN)
 ###############################################################
@@ -37,7 +37,7 @@ def control_servo(mark, frequency):
 def display_lcd(text):
     lcd.clear()
     lcd.move_to(0,0)
-    if frequency < 0:
+    if text < 0:
         lcd.putstr("ERR")
     else:
         lcd.putstr(text)
@@ -78,12 +78,14 @@ def get_freq() -> float:
                     else:
                         freq.append(-1)
                     freq_size = freq_size - 1
+                    lcd.putstr(data_size)
                     break
                 if flag:
                     data_size = data_size + 1 
                 else:
                     freq.append(1000/ (data_size * 0.25)) 
                     freq_size = freq_size - 1
+                    lcd.putstr(data_size)
                     break
     l = sorted(freq)
     return (l[int(len(l)/ 2)])
@@ -93,25 +95,27 @@ def get_freq() -> float:
 
 #########################  start  ##############################
 servo.write(0)
-display_lcd('Place tube')
+lcd.putstr('Place tube')
 sleep(15)
 lcd.clear()
 lcd.move_to(0,0)
-display_lcd('Closing Tube')
+lcd.putstr('Closing Tube')
+sleep(3)
+lcd.clear()
 servo.write(90)
 ################################################################
     
     
 while True:
     # 0.6 to 25 Hz
-    mark = 25.0
+    mark = 25
     while mark >= 1:
         flag = 0
         while True:
             freq = get_freq()
-            display_lcd(mark, freq)
+            display_lcd(freq)
             if mark ^ freq:
-                control_servo(freq)
+                control_servo(mark, freq)
             else:
                 if flag:
                     break
