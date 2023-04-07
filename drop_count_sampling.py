@@ -60,39 +60,35 @@ while True:
         flag = 2
         temp = 0
         data_size = 0
-        try:
-            while temp != data.value():
-                pass
+        while temp != data.value():
+            pass
+        while True:
             while True:
-                while True:
-                    curr_time = time.ticks_us()
-                    if curr_time - prev_time > 250:
-                        read = data.value()
-                        break
-                prev_time = curr_time
-                if read ^ temp:
-                    flag = flag - 1
-                    temp = read
-                if data_size >  3000:
-                    if read:
-                        t = -2
-                    else:
-                        t = -1
-                    oled_disp('period', t)
-                    freq.append(t) 
-                    freq_size = freq_size - 1
+                curr_time = time.ticks_us()
+                if curr_time - prev_time > 250:
+                    read = data.value()
                     break
-                if flag:
-                    data_size = data_size + 1 
+            prev_time = curr_time
+            if read ^ temp:
+                flag = flag - 1
+                temp = read
+            if data_size >  12000:
+                if read:
+                    t = -2
                 else:
-                    t = data_size * 0.25 #/ 1.85
-                    oled_disp('period', t)
-                    freq.append(t) 
-                    freq_size = freq_size - 1
-                    break
-        except:
-            oled_disp('meow', 1)
-            time.sleep(2)
+                    t = -1
+                oled_disp('period', t)
+                freq.append(t) 
+                freq_size = freq_size - 1
+                break
+            if flag:
+                data_size = data_size + 1 
+            else:
+                t = data_size * 0.25 #/ 1.85
+                oled_disp('period', t)
+                freq.append(t) 
+                freq_size = freq_size - 1
+                break
     l = sorted(freq)
     period = l[int(len(l)/ 2)]
     oled_disp('freq', (1000/period))
