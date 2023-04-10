@@ -9,7 +9,7 @@ class hmi(I2cLcd):
     
     totalRows = 4
     totalColumns = 20
-    next_screen = None
+    parameter = "volume"
     flag_irq = 0
     
     def __init__(self, addr_lcd, addr_pcf, int_pcf, id_dev):
@@ -41,67 +41,62 @@ class hmi(I2cLcd):
     def isr_setup(self, pin):
         if self.pcf.pin(self.button_dwn)==0:
             self.lcd.move_to(0, 3)
-            self.next_screen = "rate"
+            self.parameter = "rate"
         elif self.pcf.pin(self.button_up)==0:
             self.lcd.move_to(0, 2)
-            self.next_screen = "volume"
+            self.parameter = "volume"
+        elif self.pcf.pin(self.button_inc)==0:
+            if self.parameter == "volume":
+                self.lcd.move_to(7, 2)
+                self.volume = self.volume + 0.1
+                self.lcd.putstr(str(round(self.volume, 2)))
+            else:
+                self.lcd.move_to(10, 3)
+                self.drip_rate = self.drip_rate + 0.1
+                self.lcd.putstr(str(round(self.drip_rate, 2)))
+        elif self.pcf.pin(self.button_dec)==0:
+            if self.parameter == "volume":
+                self.lcd.move_to(7, 2)
+                self.volume = self.volume - 0.1
+                self.lcd.putstr(str(round(self.volume, 2)))
+            else:
+                self.lcd.move_to(10, 3)
+                self.drip_rate = self.drip_rate - 0.1
+                self.lcd.putstr(str(round(self.drip_rate, 2)))
         elif self.pcf.pin(self.button_sel)==0:
             self.screen_blank()
             self.flag_irq = 1
             
-    def isr_rate(self, pin):
-        count = 0
-        while(self.pcf.pin(self.button_sel)):
-            self.lcd.move_to(13, 3)
-            if self.pcf.pin(self.button_dwn) == 0:
-                count = count - 0.1
-            elif self.pcf.pin(self.button_up) == 0:
-                count = count + 0.1
-            self.lcd.putstr(str(self.drip_rate + count))
-        self.drip_rate = self.drip_rate + count
-        self.screen_blank()
-        self.flag_irq = 1
-        
-    def isr_volume(self, pin):
-        count = 0
-        while(self.pcf.pin(self.button_sel)):
-            self.lcd.move_to(13, 3)
-            if self.pcf.pin(self.button_dwn) == 0:
-                count = count - 0.1
-            elif self.pcf.pin(self.button_up) == 0:
-                count = count + 0.1
-            self.lcd.putstr(str(self.volume + count))
-        self.volume = self.volume + count
-        self.screen_blank()
-        self.flag_irq = 1
-    
     def screen_setup(self):
         self.lcd.move_to(15, 0)
         self.lcd.putstr(("id"+str(self.id)))
         self.lcd.move_to(0, 0)
         self.lcd.putstr("Specs:")
         self.lcd.move_to(0, 2)
-        self.lcd.putstr("Volume")
+        self.lcd.putstr(("Volume "+str(self.volume)))
+        self.lcd.move_to(19, 2)
+        self.lcd.putstr("L")
         self.lcd.move_to(0, 3)
-        self.lcd.putstr("Infusion Rate")
+        self.lcd.putstr(("Drop rate "+str(self.drip_rate)))
+        self.lcd.move_to(16, 3)
+        self.lcd.putstr("dp/m")
         self.lcd.move_to(0, 2)
         self.lcd.show_cursor()
-    
-    def screen_rate(self):
-        self.lcd.move_to(0, 0)
-        self.lcd.putstr("Infusion")
-        self.lcd.move_to(0, 2)
-        self.lcd.putstr(("Current rate: "+str(self.drip_rate)))
-        self.lcd.move_to(0, 3)
-        self.lcd.putstr(("Desired rate: "+str(self.drip_rate)))
         
-    def screen_volume(self):
+    def screen_confirm(self):
+        self.lcd.hide_cursor()
         self.lcd.move_to(0, 0)
-        self.lcd.putstr("Volume")
+        self.lcd.putstr(("Consumed "+str(self.consumed)+" %"))
+        self.lcd.move_to(0, 1)
+        self.lcd.putstr(("Time left "+str(self.time_left)))
         self.lcd.move_to(0, 2)
-        self.lcd.putstr(("Current vol: "+str(self.volume)))
+        self.lcd.putstr(("Volume "+str(self.volume)))
+        self.lcd.move_to(19, 2)
+        self.lcd.putstr("L")
         self.lcd.move_to(0, 3)
-        self.lcd.putstr(("Desired vol: "+str(self.volume)))
+        self.lcd.putstr(("Drop rate "+str(self.drip_rate)))
+        self.lcd.move_to(16, 3)
+        self.lcd.putstr("dp/m")
         
     
         
@@ -115,15 +110,6 @@ test.screen_setup()
 test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_setup)
 while True:
     if test.flag_irq:
-        if test.next_screen == "volume":
-            test.screen_volume()
-            test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_volume)
-        else:
-            test.screen_rate()
-            test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_rate)
         test.flag_irq = 0
-        break
-while True:
-    if test.flag_irq:
-        test.screen_setup()
+        test.screen_confirm()
         break
