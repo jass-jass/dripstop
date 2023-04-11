@@ -59,26 +59,22 @@ class hmi(I2cLcd):
                 self.drip_rate = self.drip_rate - 0.1
                 self.lcd.putstr(str(round(self.drip_rate, 2)))
         elif self.pcf.pin(self.button_sel)==0:
-            self.screen_blank()
             self.flag_irq = 1
             
     def isr_confirm(self, pin):
-        if self.pcf.pin(self.button_up) == 0 or self.pcf.pin(self.button_dec) ==0:
+        if self.pcf.pin(self.button_dec) == 0 or self.pcf.pin(self.button_up) ==0:
             self.lcd.move_to(1,3)
-        elif self.pcf.pin(self.button_dwn) == 0 or self.pcf.pin(self.button_inc) ==0:
+            print("yes")
+        elif self.pcf.pin(self.button_inc) == 0 or self.pcf.pin(self.button_dwn) ==0:
             self.lcd.move_to(17,3)
+            print("no")
             self.state = "setup"
         elif self.pcf.pin(self.button_sel)==0:
-            self.screen_blank()
-            if self.state == "setup":
-                self.screen_setup()
-                test.int.irq(handler = self.isr_setup, trigger = Pin.IRQ_FALLING)
-            else:
-                self.flag_irq = 1
+            self.flag_irq = 1
             
     def screen_setup(self):
         self.screen_blank()
-        self.lcd.move_to(0, 0)
+        self.lcd.move_to(0, 1)
         self.lcd.putstr("Specs:")
         self.lcd.move_to(0, 2)
         self.lcd.putstr(("Volume "+str(self.volume)))
@@ -98,6 +94,7 @@ class hmi(I2cLcd):
         self.lcd.putstr(("ID"+str(self.id)))
         
     def screen_confirm(self):
+        self.screen_blank()
         self.lcd.move_to(2,1)
         self.lcd.putstr(("Are you sure you     want to " + self.state + "?"))
         self.lcd.move_to(1,3)
@@ -108,6 +105,7 @@ class hmi(I2cLcd):
         self.lcd.show_cursor()
         
     def screen_display(self):
+        self.screen_blank()
         self.lcd.hide_cursor()
         self.lcd.move_to(0, 0)
         self.lcd.putstr(("Consumed "+str(self.consumed)+" %"))
@@ -130,11 +128,32 @@ i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=10000)
 addr = i2c.scan()
 int_pcf = Pin(23, Pin.IN)
 test = hmi(addr[1], addr[0], int_pcf, 100)
-test.screen_blank()
+test.screen_setup()
+test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_setup)
+while True:
+    if test.flag_irq:
+        test.int.irq(handler = None, trigger = 0)
+        test.flag_irq = 0
+        test.screen_display()
+        sleep(2)
+        break
 test.screen_confirm()
 test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_confirm)
 while True:
     if test.flag_irq:
-        test.flag_irq = 0
+        print("yaay")
         test.int.irq(handler = None, trigger = 0)
+        test.flag_irq = 0
         break
+if test.state == "setup":
+    test.screen_setup()
+    test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_setup)
+    while True:
+        if test.flag_irq:
+            test.int.irq(handler = None, trigger = 0)
+            test.flag_irq = 0
+            test.screen_display()
+            sleep(2)
+            break
+    test.screen_confirm()
+    test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_confirm)
