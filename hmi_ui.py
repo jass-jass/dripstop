@@ -82,20 +82,16 @@ class hmi(I2cLcd):
         elif self.pcf.pin(self.button_sel)==0:
             self.flag_irq = 1
     
-    def animate_drops(self, x_start, x_limit, line):
-        x = x_start
-        while True:
-            if x < x_limit:
-                x = x + 1
-            else:
-                x = x_start
+    def animate_drops(self, x, x_limit, line):
+        while x < x_limit:
             self.lcd.move_to(x, line)
-            self.lcd.putstr("\x02")
+            self.lcd.putstr("\x01")
             self.lcd.move_to(x, line)
             t = time.ticks_us()
             while time.ticks_us() - t < 600000:
                 pass
             self.lcd.putstr(" ")
+            x = x + 1
     
     def screen_setup(self):
         self.screen_blank()
@@ -111,7 +107,7 @@ class hmi(I2cLcd):
         self.lcd.putstr(("Drop rate "+str(self.drip_rate)))
         self.lcd.move_to(16, 3)
         self.lcd.putstr("dp/m")
-        self.lcd.move_to(0, 2)
+        self.lcd.move_to(0, 1)
         self.lcd.show_cursor()
    
     def screen_calibrate(self):
@@ -171,6 +167,9 @@ while True:
         while time.ticks_us() - t < 2000000:
             pass
         break
+if test.parameter == "calibrate":
+    test.screen_calibrate()
+    test.animate_drops(4, 14, 3)
 test.screen_confirm()
 test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_confirm)
 while True:
