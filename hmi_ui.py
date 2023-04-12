@@ -14,7 +14,8 @@ class hmi(I2cLcd):
     state = "start"
     flag_irq = 0
     cursor = 0,0    # cursor[0] - x
-                    # cursor[1] - y
+                    # cursor[1] - y    
+    
     
     def __init__(self, addr_lcd, addr_pcf, int_pcf, id_dev):
         self.lcd = I2cLcd(i2c, addr_lcd, self.totalRows, self.totalColumns)
@@ -23,7 +24,7 @@ class hmi(I2cLcd):
         self.id = id_dev
         self.consumed = 0
         self.time_left = -1
-        self.lcd.clear()
+        self.lcd.custom_char(1, [ 0x04,0x0E,0x0E,0x1F,0x1F,0x1F,0x0E,0x00])
         ###                            ###
         self.pcf = pcf8574.PCF8574(i2c, addr_pcf)
         self.int = int_pcf
@@ -97,10 +98,12 @@ class hmi(I2cLcd):
         self.lcd.putstr("dp/m")
         self.lcd.move_to(0, 2)
         self.lcd.show_cursor()
-        
+   
     def screen_calibrate(self):
         self.screen_blank()
-        
+        self.lcd.move_to(4,2)
+        self.lcd.putstr("In progress")
+        self.animate_drops()
         
     def screen_blank(self):
         self.lcd.hide_cursor()
