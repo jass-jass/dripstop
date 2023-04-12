@@ -1,8 +1,10 @@
 ### import ###
 from machine import Pin, PWM, I2C
 from micropython import const
-from time import sleep
-import uasyncio
+from time
+from servo_motor import Servos
+from hmi_ui import HMI_UI
+import uasyncio, math
 from hx711 import HX711
 
 
@@ -10,17 +12,19 @@ from hx711 import HX711
 #######################################################################
                          ''' Initializations '''
 #######################################################################
+### Protocols ###
+i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
+addr = i2c_device.scan()
+
 ### Outputs ###
 status_led = Pin(23, Pin.OUT)
-servo = PWM(Pin(26), freq(50))
+servo = Servos(i2c, addr[0], freq=50)
+hmi = HMI_UI(addr[1], addr[0], int_pcf, 101)
 
 ### Inputs ###
 drip_sensor = Pin(14, Pin.IN)   # interrupt for rising and falling edges
-pcf_int = Pin(25, Pin.IN)   # interrupt
+int_pcf= Pin(25, Pin.IN)   # interrupt
 load_cell = HX711(d_out = 4, pd_sck = 18, channel = 1)  # channel A gain 128
-
-### Protocols ###
-i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 
 ### Variables ###
 tube_change = 1
@@ -67,6 +71,78 @@ def HMI_ISR():
 
 
 #######################################################################
+                          '''FUNCTIONS'''
+#######################################################################
+# Frequency count
+def get_freq() ->float:
+    samples = 10
+    count = samples + 1
+    sum_time = 0
+    prev_time = 0
+    curr_time = 0
+    read = 0
+    freq_size = 10
+    freq = []
+    while freq_size:
+        flag = 2
+        temp = 0
+        data_size = 0
+        while temp != data.value():
+            pass
+        while True:
+            while True:
+                curr_time = time.ticks_us()
+                if curr_time - prev_time > 250:
+                    read = data.value()
+                    break
+            prev_time = curr_time
+            if read ^ temp:
+                flag = flag - 1
+                temp = read
+            if data_size > 12000:
+                if freq_size == 10:
+                    lcd.clear()
+                    lcd.putstr("Drip Period:")
+                lcd.move_to(0,1)
+                if read:
+                    t = -1
+                    lcd.putstr("No drop   ")
+                else:
+                    t = 5000000
+                    lcd.putstr("Stream   ")
+                freq.append(t) 
+                freq_size = freq_size - 1
+                break
+            if flag:
+                data_size = data_size + 1 
+            else:
+                t = data_size * 0.25 #/ 1.85
+                if freq_size == 10:
+                    lcd.clear()
+                    lcd.putstr("Drip Period:")
+                lcd.move_to(0,1)
+                lcd.putstr(str(t))
+                lcd.putstr(" ms   ")
+                freq.append(t) 
+                freq_size = freq_size - 1
+                break
+    l = sorted(freq)
+    period = l[int(len(l)/ 2)]
+    return (1000/period)
+
+# Servo control
+def control_servo(mark, frequency):
+    # greater the frequency, lesser the angle
+    if mark > frequency:
+        angle = servo.read() - 1
+    else:
+        angle = servo.read() + 1 
+    servo.position(0, degrees = ((angle*103)/90))
+#######################################################################
+
+
+
+#######################################################################
                             '''STATES'''
 #######################################################################
 ### power on state ###
@@ -75,7 +151,7 @@ async def power_on():
     led_status.value(status_power_on)
     # lcd display configure
     if tube_change:
-        servo.duty(servo_home)
+        servo.position(servo_home)
         tube_change = 0
     # HMI with LCD updation
     await # wait for start button to be pressed
@@ -94,19 +170,19 @@ async def start():
 ### compare and adjust state ###
 async def comp_n_adjust():
     global state
-    servo_step = 0
+    flag_verify = 0
     while state == comp_n_adjust:
-        # ticks with interrupt
-        if drip_rate = freq_ticks:
-            count_flag = count_flag + 1
-        else:
-            servo_step = servo_step + 2     # angle increased by 2 degrees
-            servo.duty(servo_close + servo_step)
-        if count_flag == 2:
-            count_flag = 0
-            return idle
+        while True:
+          freq = get_freq()
+          if abs(drip_rate - freq) >= 0.1:
+              control_servo(drip_rate, freq)
+          else:
+              if flag_verify:
+                  break
+              flag_verify = flag_verify + 1
+        return idle
+            
     
-
 ### Idle state ###
 async def idle():
     global state
@@ -135,7 +211,7 @@ async def schedule_interrupt():
     while True:
         await tsf.wait()
 
-pdf_int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
+int_pcf.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
 
 loop = uasyncio.get_event_loop()
 loop.create_task(run_state_machine())    # FSM for main tasks
