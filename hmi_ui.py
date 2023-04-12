@@ -2,7 +2,7 @@ import machine, pcf8574
 from machine import Pin, I2C
 from lcd_api import LcdApi
 from i2c_lcd import I2cLcd
-from time import sleep
+from time
 
 
 class hmi(I2cLcd):
@@ -81,7 +81,22 @@ class hmi(I2cLcd):
             self.state = "setup"
         elif self.pcf.pin(self.button_sel)==0:
             self.flag_irq = 1
-            
+    
+    def animate_drops(x_start, x_limit, line):
+        x = x_start
+        while True:
+            if x < x_limit:
+                x = x + 1
+            else:
+                x = x_start
+            self.lcd.move_to(x, line)
+            self.lcd.putstr("\x02")
+            t = time.time_us()
+            while time.time_us() - t < 600:
+                pass
+            self.lcd.move_to(x, line)
+            self.lcd.putstr(" ")
+    
     def screen_setup(self):
         self.screen_blank()
         self.lcd.move_to(0, 0)
@@ -103,7 +118,6 @@ class hmi(I2cLcd):
         self.screen_blank()
         self.lcd.move_to(4,2)
         self.lcd.putstr("In progress")
-        self.animate_drops()
         
     def screen_blank(self):
         self.lcd.hide_cursor()
