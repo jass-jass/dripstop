@@ -13,7 +13,7 @@ class hmi(I2cLcd):
     parameter = params[0]
     state = "start"
     flag_irq = 0
-    cursor = 0,0    # cursor[0] - x
+    cursor = [0,0]    # cursor[0] - x
                     # cursor[1] - y    
     
     
@@ -42,20 +42,20 @@ class hmi(I2cLcd):
             self.cursor[1] = self.cursor[1] + 1
             if self.cursor[1] > 3:
                 self.cursor[1] = 3
-            self.lcd.move_to(cursor)
-            self.parameter = params[(self.cursor[1]+1)]
+            self.lcd.move_to(self.cursor[0], self.cursor[1])
+            self.parameter = self.params[(self.cursor[1]-1)]
         if self.pcf.pin(self.button_up)==0:
             self.cursor[1] = self.cursor[1] - 1
             if self.cursor[1] < 1:
                 self.cursor[1] = 1
-            self.lcd.move_to(cursor)
-            self.parameter = params[(self.cursor[1]+1)]
+            self.lcd.move_to(self.cursor[0], self.cursor[1])
+            self.parameter = self.params[(self.cursor[1]-1)]
         elif self.pcf.pin(self.button_inc)==0:
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
                 self.volume = self.volume + 0.1
                 self.lcd.putstr(str(round(self.volume, 2)))
-            else:
+            elif self.parameter == "rate":
                 self.lcd.move_to(10, 3)
                 self.drip_rate = self.drip_rate + 0.1
                 self.lcd.putstr(str(round(self.drip_rate, 2)))
@@ -64,7 +64,7 @@ class hmi(I2cLcd):
                 self.lcd.move_to(7, 2)
                 self.volume = self.volume - 0.1
                 self.lcd.putstr(str(round(self.volume, 2)))
-            else:
+            elif self.parameter == "rate":
                 self.lcd.move_to(10, 3)
                 self.drip_rate = self.drip_rate - 0.1
                 self.lcd.putstr(str(round(self.drip_rate, 2)))
@@ -82,20 +82,20 @@ class hmi(I2cLcd):
         elif self.pcf.pin(self.button_sel)==0:
             self.flag_irq = 1
     
-    def animate_drops(x_start, x_limit, line):
+    def animate_drops(self, x_start, x_limit, line):
         x = x_start
         while True:
             if x < x_limit:
                 x = x + 1
             else:
                 x = x_start
-            lcd.move_to(x, line)
-            lcd.putstr("\x02")
-            lcd.move_to(x, line)
+            self.lcd.move_to(x, line)
+            self.lcd.putstr("\x02")
+            self.lcd.move_to(x, line)
             t = time.ticks_us()
             while time.ticks_us() - t < 600000:
                 pass
-            lcd.putstr(" ")
+            self.lcd.putstr(" ")
     
     def screen_setup(self):
         self.screen_blank()
@@ -167,7 +167,9 @@ while True:
         test.int.irq(handler = None, trigger = 0)
         test.flag_irq = 0
         test.screen_display()
-        sleep(2)
+        t = time.ticks_us()
+        while time.ticks_us() - t < 2000000:
+            pass
         break
 test.screen_confirm()
 test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_confirm)
@@ -185,7 +187,9 @@ if test.state == "setup":
             test.int.irq(handler = None, trigger = 0)
             test.flag_irq = 0
             test.screen_display()
-            sleep(2)
+            t = time.ticks_us()
+            while time.ticks_us() - t < 2000000:
+                pass
             break
     test.screen_confirm()
     test.int.irq(trigger = Pin.IRQ_FALLING, handler = test.isr_confirm)
