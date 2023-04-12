@@ -2,7 +2,7 @@ import machine, pcf8574
 from machine import Pin, I2C
 from lcd_api import LcdApi
 from i2c_lcd import I2cLcd
-from time
+import time
 
 
 class hmi(I2cLcd):
@@ -89,13 +89,13 @@ class hmi(I2cLcd):
                 x = x + 1
             else:
                 x = x_start
-            self.lcd.move_to(x, line)
-            self.lcd.putstr("\x02")
-            t = time.time_us()
-            while time.time_us() - t < 600:
+            lcd.move_to(x, line)
+            lcd.putstr("\x02")
+            lcd.move_to(x, line)
+            t = time.ticks_us()
+            while time.ticks_us() - t < 600000:
                 pass
-            self.lcd.move_to(x, line)
-            self.lcd.putstr(" ")
+            lcd.putstr(" ")
     
     def screen_setup(self):
         self.screen_blank()
