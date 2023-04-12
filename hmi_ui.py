@@ -9,9 +9,12 @@ class hmi(I2cLcd):
     
     totalRows = 4
     totalColumns = 20
-    parameter = "volume"
+    params = "calibrate", "volume", "rate"
+    parameter = params[0]
     state = "start"
     flag_irq = 0
+    cursor = 0,0    # cursor[0] - x
+                    # cursor[1] - y
     
     def __init__(self, addr_lcd, addr_pcf, int_pcf, id_dev):
         self.lcd = I2cLcd(i2c, addr_lcd, self.totalRows, self.totalColumns)
@@ -35,11 +38,17 @@ class hmi(I2cLcd):
         
     def isr_setup(self, pin):
         if self.pcf.pin(self.button_dwn)==0:
-            self.lcd.move_to(0, 3)
-            self.parameter = "rate"
-        elif self.pcf.pin(self.button_up)==0:
-            self.lcd.move_to(0, 2)
-            self.parameter = "volume"
+            self.cursor[1] = self.cursor[1] + 1
+            if self.cursor[1] > 3:
+                self.cursor[1] = 3
+            self.lcd.move_to(cursor)
+            self.parameter = params[(self.cursor[1]+1)]
+        if self.pcf.pin(self.button_up)==0:
+            self.cursor[1] = self.cursor[1] - 1
+            if self.cursor[1] < 1:
+                self.cursor[1] = 1
+            self.lcd.move_to(cursor)
+            self.parameter = params[(self.cursor[1]+1)]
         elif self.pcf.pin(self.button_inc)==0:
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
@@ -74,8 +83,10 @@ class hmi(I2cLcd):
             
     def screen_setup(self):
         self.screen_blank()
-        self.lcd.move_to(0, 1)
+        self.lcd.move_to(0, 0)
         self.lcd.putstr("Specs:")
+        self.lcd.move_to(0, 1)
+        self.lcd.putstr("Calibrate")
         self.lcd.move_to(0, 2)
         self.lcd.putstr(("Volume "+str(self.volume)))
         self.lcd.move_to(19, 2)
@@ -86,6 +97,10 @@ class hmi(I2cLcd):
         self.lcd.putstr("dp/m")
         self.lcd.move_to(0, 2)
         self.lcd.show_cursor()
+        
+    def screen_calibrate(self):
+        self.screen_blank()
+        
         
     def screen_blank(self):
         self.lcd.hide_cursor()
