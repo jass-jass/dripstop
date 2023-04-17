@@ -153,7 +153,9 @@ def setup() -> float:
         if i:
             slope = slope + (freqncy[(i-1)]-freqncy[i])
     slope = slope/3
-    servo.position(0, degrees = 103)
+    i = 0
+    while get_freq():
+        servo.position(0, degrees = (100+i))
     lcd.clear()
     lcd.putstr(str(slope))
     sleep(10)
