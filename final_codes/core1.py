@@ -3,7 +3,7 @@ from machine import Pin, PWM, I2C
 from micropython import const
 from time
 from servo_motor import Servos
-from hmi_ui import HMI_UI
+from hmi_ui import HMI
 import uasyncio, math
 from hx711 import HX711
 
@@ -17,15 +17,15 @@ i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 addr = i2c_device.scan()
 
 ### Outputs ###
-status_led = Pin(23, Pin.OUT)
-servo = Servos(i2c, addr[0], freq=50)
-hmi = HMI_UI(addr[1], addr[0], int_pcf, 101)
+#status_led = Pin(, Pin.OUT)
+servo = Servos(i2c, addr[2], freq=50)
+hmi = HMI(i2c, addr[1], addr[0], int_pcf, 101)
 nano = Pin(4, Pin.OUT)
 
 ### Inputs ###
 drip_sensor = Pin(19, Pin.IN)   # square pulse from drops
 int_pcf= Pin(23, Pin.IN)   # interrupt
-load_cell = HX711(d_out = 4, pd_sck = 18, channel = 1)  # channel A gain 128
+load_cell = HX711(d_out = 17, pd_sck = 16, channel = 1)  # channel A gain 128
 
 ### Variables ###
 tube_change = 1
@@ -58,14 +58,13 @@ state = power_on
 #######################################################################
                              '''ISRs'''
 #######################################################################
-def HMI_ISR():
+def isr_hmi(pin):
   global load_cell_flag
   global input_array
   if load_cell_flag:
     # disable interrupt
     # return to idle
-  elif input_array xor :   # data from pcf
-
+  elif input_array xor :   # data from pcf 
 
 #######################################################################
 
@@ -104,16 +103,16 @@ def get_freq() ->float:
                 temp = read
             if data_size > 12000:
                 if freq_size == 10:
-                    lcd.clear()
-                    lcd.putstr("Drip Period:")
-                lcd.move_to(0,1)
+                    hmi.lcd.clear()
+                    hmi.lcd.putstr("Drip Period:")
+                hmi.lcd.move_to(0,1)
                 if read:
                     #t = -1
                     no_drop = no_drop + 1
-                    lcd.putstr("No drop   ")
+                    hmi.lcd.putstr("No drop   ")
                 else:
                     stream = stream + 1
-                    lcd.putstr("Stream   ")
+                    hmi.lcd.putstr("Stream   ")
                 break
             if no_drop == 2:
                 return (0.0)
@@ -124,11 +123,11 @@ def get_freq() ->float:
             else:
                 t = data_size * 0.25 #/ 1.85
                 if freq_size == 10:
-                    lcd.clear()
-                    lcd.putstr("Drip Period:")
-                lcd.move_to(0,1)
-                lcd.putstr(str(t))
-                lcd.putstr(" ms   ")
+                    hmi.lcd.clear()
+                    hmi.lcd.putstr("Drip Period:")
+                hmi.lcd.move_to(0,1)
+                hmi.lcd.putstr(str(t))
+                hmi.lcd.putstr(" ms   ")
                 freq.append(t) 
                 freq_size = freq_size - 1
                 break
@@ -147,8 +146,8 @@ def control_servo(mark, frequency):
         angle = 90
     elif angle < 20:
         angle = 20
-    lcd.move_to(0,3)
-    lcd.putstr(str(angle))
+    hmi.lcd.move_to(0,3)
+    hmi.lcd.putstr(str(angle))
     servo.position(0, degrees = ((angle*103)/90))
     
 ##### Calibrate
@@ -172,6 +171,38 @@ def calibrate() -> float:
         servo.position(0, degrees = (100+i))
     servo_close = servo_angle(0)
     return freqncy[3]
+  
+##### HMI 
+def setup_hmi(state, isr):
+  #state = hmi.screen_setup
+  #isr = hmi.isr_setup
+  while True:
+      state()
+      hmi.int.irq(trigger = Pin.IRQ_FALLING, handler = isr)
+      if hmi.state == "calibrate":
+          hmi.animate_drops(4, 14, 3)
+          hmi.flag_irq = 1
+      while True:
+          if hmi.flag_irq:
+              hmi.int.irq(handler = None, trigger = 0)
+              hmi.flag_irq = 0
+              break
+      if hmi.state == "setup":
+          state = hmi.screen_setup
+          isr = hmi.isr_setup
+      elif hmi.state == "confirm":
+          hmi.screen_display()
+          time.sleep(1)
+          state = hmi.screen_confirm
+          isr = hmi.isr_confirm
+      elif hmi.state == "calibrate":
+          state = hmi.screen_calibrate
+          isr = hmi.isr_continue
+      elif hmi.state == "done":
+          hmi.screen_display()
+          state = hmi.screen_setup
+          isr = hmi.isr_setup
+          break 
 #######################################################################
 
 
@@ -187,8 +218,12 @@ async def power_on():
     if tube_change:
         servo.position(servo_home)
         tube_change = 0
-    # HMI with LCD updation
+    setup_hmi(hmi.screen_setup, hmi.isr_setup)
+    '''
+            FIX WAIT CONDITION HERE 
+    '''
     await # wait for start button to be pressed
+    state = start 
     
     
 ### start state ###
@@ -199,6 +234,7 @@ async def start():
     drip_rate = # calculate drip rate
     # check for current rate and calculated 
     # switch to idle or adjust acc
+    state = comp_n_adjust
     
     
 ### compare and adjust state ###
@@ -208,7 +244,7 @@ async def comp_n_adjust():
     while state == comp_n_adjust:
         while True:
           freq = get_freq()
-          if abs(drip_rate - freq) >= 0.1:
+          if abs(drip_rate - freq) >= 0.25:
               control_servo(drip_rate, freq)
           else:
               if flag_verify:
