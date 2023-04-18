@@ -29,12 +29,14 @@ load_cell = HX711(d_out = 17, pd_sck = 16, channel = 1)  # channel A gain 128
 
 ### Variables ###
 tube_change = 1
-drip_rate = 0
-slope = 0
+drip_rate = 0.0
+# slope = 0
+volume = 0.0
 
 ### Flags ###
-load_cell_flag = 0
-count_flag = 0
+flag_load_cell = 0
+flag_count = 0
+flag_int = 1
 
 ### Constants ###
 # Status LED
@@ -59,13 +61,17 @@ state = power_on
                              '''ISRs'''
 #######################################################################
 def isr_hmi(pin):
-  global load_cell_flag
+  global flag_load_cell
   global input_array
   if load_cell_flag:
     int_pcf.irq(trigger = 0, handle = None)
     state = idle
-  elif input_array xor :   # data from pcf 
-
+  else:
+    
+    
+    elif (volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf 
+      
+    
 #######################################################################
 
 
