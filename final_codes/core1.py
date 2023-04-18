@@ -24,7 +24,7 @@ nano = Pin(4, Pin.OUT)
 
 ### Inputs ###
 drip_sensor = Pin(19, Pin.IN)   # square pulse from drops
-int_pcf= Pin(23, Pin.IN)   # interrupt
+int_pcf = Pin(23, Pin.IN)   # interrupt
 load_cell = HX711(d_out = 17, pd_sck = 16, channel = 1)  # channel A gain 128
 
 ### Variables ###
@@ -62,8 +62,8 @@ def isr_hmi(pin):
   global load_cell_flag
   global input_array
   if load_cell_flag:
-    # disable interrupt
-    # return to idle
+    int_pcf.irq(trigger = 0, handle = None)
+    state = idle
   elif input_array xor :   # data from pcf 
 
 #######################################################################
