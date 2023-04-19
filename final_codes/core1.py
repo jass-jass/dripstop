@@ -237,14 +237,15 @@ async def start():
     if (drip_rate - hmi.drip_rate < 0.48) and (volume == hmi.volume):
       state = idle
       return
-    # check for current rate and calculated 
-    # switch to idle or adjust acc
-    state = comp_n_adjust
+    else:
+      volume = hmi.volume
+      state = comp_n_adjust
     
     
 ### compare and adjust state ###
 async def comp_n_adjust():
     global state
+    global drip_rate
     flag_verify = 0
     while state == comp_n_adjust:
         while True:
