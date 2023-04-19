@@ -65,8 +65,15 @@ def isr_hmi(pin):
     state = idle
   else:
     int_pcf.irq(trigger = 0, handle = None)
-    
-    elif (volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf 
+    if hmi.button_strt == 0:
+      hmi.sr = "edit"
+    elif hmi.button_rst == 0:
+      hmi.sr = "reset"
+      tube_change = 1
+    hmi_confirm()
+    hmi.sr = "start"
+    state = power_on
+  # (volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf 
   loop.close()
   gc.collect()
   loop = uasyncio.new_event_loop()
@@ -163,14 +170,24 @@ def calibrate(): -> float:
     return 0.0
   
 ##### HMI 
-def setup_hmi(state, isr):
+def hmi_confirm():
+  hmi.screen_confirm()
+  hmi.int.irq(trigger = Pin.IRQ_FALLING, handler = hmi.isr_confirm)
+  while True:
+          if hmi.flag_irq:
+              hmi.int.irq(handler = None, trigger = 0)
+              hmi.flag_irq = 0
+              break
+  
+def hmi_setup(state, isr):
+  global drip_rate
   #state = hmi.screen_setup
   #isr = hmi.isr_setup
   while True:
       state()
       hmi.int.irq(trigger = Pin.IRQ_FALLING, handler = isr)
       if hmi.state == "calibrate":
-          hmi.animate_drops(4, 14, 3)
+          drip_rate = calibrate()
           hmi.flag_irq = 1
       while True:
           if hmi.flag_irq:
@@ -203,25 +220,21 @@ def setup_hmi(state, isr):
 ### power on state ###
 async def power_on():
     global state
-    led_status.value(status_power_on)
-    # lcd display configure
+    #led_status.value(status_power_on)
     if tube_change:
         servo.position(servo_home)
         tube_change = 0
     setup_hmi(hmi.screen_setup, hmi.isr_setup)
-    '''
-            FIX WAIT CONDITION HERE 
-    '''
-    await # wait for start button to be pressed
+    int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+   # await # wait for start button to be pressed
     state = start 
     
     
 ### start state ###
 async def start():
     global state
-    servo.duty(servo_close)
-    led_status.value(status_calibrate)
-    drip_rate = # calculate drip rate
+    #led_status.value(status_calibrate)
+    if (drip_rate - hmi.drip_rate < 0.48) and (volume - 
     # check for current rate and calculated 
     # switch to idle or adjust acc
     state = comp_n_adjust
@@ -273,7 +286,7 @@ async def schedule_interrupt():
         await tsf.wait()
 '''
 
-int_pcf.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
+int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
 
 loop = uasyncio.get_event_loop()
 loop.create_task(run_state_machine())    # FSM for main tasks
