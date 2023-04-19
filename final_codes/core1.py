@@ -4,7 +4,7 @@ from micropython import const
 from time
 from servo_motor import Servos
 from hmi_ui import HMI
-import uasyncio, math
+import uasyncio, math, gc
 from hx711 import HX711
 
 
@@ -30,7 +30,6 @@ load_cell = HX711(d_out = 17, pd_sck = 16, channel = 1)  # channel A gain 128
 ### Variables ###
 tube_change = 1
 drip_rate = 0.0
-# slope = 0
 volume = 0.0
 
 ### Flags ###
@@ -50,7 +49,7 @@ servo_close = 90
 servo_step = 0
 
 # FSM 
-state = power_on
+state = None
 
 
 #######################################################################
@@ -62,15 +61,17 @@ state = power_on
 #######################################################################
 def isr_hmi(pin):
   global flag_load_cell
-  global input_array
-  if load_cell_flag:
+  if flag_load_cell:
     int_pcf.irq(trigger = 0, handle = None)
     state = idle
   else:
     
     
     elif (volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf 
-      
+  loop.close()
+  gc.collect()
+  loop = uasyncio.new_event_loop()
+  loop.create_task(run_state_machine())
     
 #######################################################################
 
@@ -81,7 +82,7 @@ def isr_hmi(pin):
 #######################################################################
 ##### Frequency count
 def get_freq() ->float:
-    samples = 10
+    samples = 5
     count = samples + 1
     no_drop = 0
     stream = 0
@@ -109,16 +110,10 @@ def get_freq() ->float:
                 temp = read
             if data_size > 12000:
                 if freq_size == 10:
-                    hmi.lcd.clear()
-                    hmi.lcd.putstr("Drip Period:")
-                hmi.lcd.move_to(0,1)
                 if read:
-                    #t = -1
                     no_drop = no_drop + 1
-                    hmi.lcd.putstr("No drop   ")
                 else:
                     stream = stream + 1
-                    hmi.lcd.putstr("Stream   ")
                 break
             if no_drop == 2:
                 return (0.0)
@@ -127,13 +122,7 @@ def get_freq() ->float:
             if flag:
                 data_size = data_size + 1 
             else:
-                t = data_size * 0.25 #/ 1.85
-                if freq_size == 10:
-                    hmi.lcd.clear()
-                    hmi.lcd.putstr("Drip Period:")
-                hmi.lcd.move_to(0,1)
-                hmi.lcd.putstr(str(t))
-                hmi.lcd.putstr(" ms   ")
+                t = data_size * 0.25 # sample size * data count
                 freq.append(t) 
                 freq_size = freq_size - 1
                 break
@@ -147,36 +136,32 @@ def servo_angle(index) -> float:
 
 def control_servo(mark, frequency):
     # greater the frequency, lesser the angle
-    angle = (servo_angle(0)) - math.ceil((mark - frequency)*slope)
-    if angle > 90:
-        angle = 90
-    elif angle < 20:
-        angle = 20
-    hmi.lcd.move_to(0,3)
-    hmi.lcd.putstr(str(angle))
+    if mark > frequency:
+        angle = (servo_angle(0)) + 1
+    else:
+        angle = (servo_angle(0)) - 1
+    if angle < 97:
+        angle = 98
     servo.position(0, degrees = ((angle*103)/90))
     
 ##### Calibrate
-def calibrate() -> float:
-    global slope
-    global servo_home
+def calibrate(): -> float:
+    global servo_close
     servo.position(0, degrees = 0)
+    i = input()
     nano.on()
-    servo.position(0, degrees = 83)
+    servo.position(0, degrees = 78)
+    # no needle 77
+    # medium needle 82
+    sleep(1)
     nano.off()
-    sleep(5)
-    freqncy = []
-    for i in range(4):
-        servo.position(0, degrees = (83 + i))
-        freqncy.append(get_freq())
-        if i:
-            slope = slope + (freqncy[(i-1)]-freqncy[i])
-    slope = slope/3
+    hmi.animate_drops
     i = 0
     while get_freq():
-        servo.position(0, degrees = (100+i))
-    servo_close = servo_angle(0)
-    return freqncy[3]
+        servo.position(0, degrees = (90+i))
+        i = i + 1
+    servo_close = 90 + i
+    return 0.0
   
 ##### HMI 
 def setup_hmi(state, isr):
@@ -268,7 +253,7 @@ async def idle():
 #######################################################################
 
 
-
+state = power_on
 async def run_state_machine():
     global state
     while True:
@@ -277,6 +262,7 @@ async def run_state_machine():
        
 ### thread safe flag allows interrupts and threads to run along with 
 ### tasks of the fsm
+'''
 tsf = uasyncio.ThreadSafeFlag()
 
 def set_tsf(_):
@@ -286,10 +272,11 @@ def set_tsf(_):
 async def schedule_interrupt():
     while True:
         await tsf.wait()
+'''
 
 int_pcf.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
 
 loop = uasyncio.get_event_loop()
 loop.create_task(run_state_machine())    # FSM for main tasks
-loop.create_task(schedule_interrupt())   # FSM for interrupts
+#loop.create_task(schedule_interrupt())   # FSM for interrupts
 loop.run_forever()
