@@ -234,7 +234,9 @@ async def power_on():
 async def start():
     global state
     #led_status.value(status_calibrate)
-    if (drip_rate - hmi.drip_rate < 0.48) and (volume - 
+    if (drip_rate - hmi.drip_rate < 0.48) and (volume == hmi.volume):
+      state = idle
+      return
     # check for current rate and calculated 
     # switch to idle or adjust acc
     state = comp_n_adjust
