@@ -35,7 +35,6 @@ volume = 0.0
 ### Flags ###
 flag_load_cell = 0
 flag_count = 0
-flag_int = 1
 
 ### Constants ###
 # Status LED
@@ -50,6 +49,7 @@ servo_step = 0
 
 # FSM 
 state = None
+#hmi_state = hmi.screen_setup
 
 
 #######################################################################
@@ -62,10 +62,9 @@ state = None
 def isr_hmi(pin):
   global flag_load_cell
   if flag_load_cell:
-    int_pcf.irq(trigger = 0, handle = None)
     state = idle
   else:
-    
+    int_pcf.irq(trigger = 0, handle = None)
     
     elif (volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf 
   loop.close()
