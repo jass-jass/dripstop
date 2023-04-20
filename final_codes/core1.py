@@ -59,24 +59,32 @@ state = None
 #                            '''ISRs'''                               #
 #######################################################################
 def isr_hmi(pin):
-  global flag_load_cell
-  if flag_load_cell:
-    state = idle
-  else:
-    int_pcf.irq(trigger = 0, handler = None)
-    if hmi.button_strt == 0:
-      hmi.sr = "edit"
-    elif hmi.button_rst == 0:
-      hmi.sr = "reset"
-      tube_change = 1
-    hmi_confirm()
-    hmi.sr = "start"
-    state = power_on
-  # (volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf 
-  loop.close()
-  gc.collect()
-  loop = uasyncio.new_event_loop()
-  loop.create_task(run_state_machine())
+    hmi.int.irq(trigger = 0, handler = None)
+    global state
+    global flag_load_cell
+    global loop
+    if flag_load_cell:
+        state = idle
+    else:
+        if hmi.pcf.pin(hmi.button_sel) == 0:
+            hmi.sr = "edit"
+        elif hmi.pcf.pin(hmi.button_rst) == 0:
+            hmi.sr = "reset"
+            #tube_change = 1
+        else:
+            hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+            #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
+            return
+        y_n = hmi_confirm()
+        if y_n:
+            return
+        hmi.sr = "start"
+        state = power_on
+    #(volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf
+    loop.close()
+    gc.collect()
+    loop = uasyncio.new_event_loop()
+    loop.create_task(run_state_machine())
     
 #######################################################################
 
@@ -114,10 +122,6 @@ def get_freq() ->float:
                 flag = flag - 1
                 temp = read
             if data_size > 12000:
-                '''if freq_size == 10:
-                    lcd.clear()
-                    lcd.putstr("Drip Period:")
-                lcd.move_to(0,1)'''
                 if read:
                     no_drop = no_drop + 1
                 else:
@@ -131,12 +135,6 @@ def get_freq() ->float:
                 data_size = data_size + 1 
             else:
                 t = data_size * 0.25 #/ 1.85
-                '''if freq_size == 10:
-                    lcd.clear()
-                    lcd.putstr("Drip Period:")
-                lcd.move_to(0,1)
-                lcd.putstr(str(t))
-                lcd.putstr(" ms   ")'''
                 freq.append(t) 
                 freq_size = freq_size - 1
                 break
@@ -178,13 +176,14 @@ def calibrate() -> float:
   
 ##### HMI 
 def hmi_confirm():
-  hmi.screen_confirm()
-  hmi.int.irq(trigger = Pin.IRQ_FALLING, handler = hmi.isr_confirm)
-  while True:
-          if hmi.flag_irq:
-              hmi.int.irq(handler = None, trigger = 0)
-              hmi.flag_irq = 0
-              break
+    hmi.screen_confirm()
+    y_n = 0
+    while hmi.pcf.pin(hmi.button_sel):
+        if hmi.pcf.pin(hmi.button_inc) == 0:
+            y_n = 1
+        elif hmi.pcf.pin(hmi.button_dec) == 0:
+            y_n = 0
+    return y_n
   
 def hmi_setup(state, isr):
   global drip_rate
@@ -234,7 +233,8 @@ async def power_on():
         servo.position(0, servo_home)
         tube_change = 0
     hmi_setup(hmi.screen_setup, hmi.isr_setup)
-    int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+    hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+    #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
    # await # wait for start button to be pressed
     state = start 
     
@@ -298,19 +298,20 @@ async def run_state_machine():
        
 ### thread safe flag allows interrupts and threads to run along with 
 ### tasks of the fsm
+
 '''
 tsf = uasyncio.ThreadSafeFlag()
 
 def set_tsf(_):
     tsf.set()
-    HMI_ISR()
+    isr_hmi(1)
 
 async def schedule_interrupt():
     while True:
         await tsf.wait()
 '''
 
-#int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+#hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
 
 loop = uasyncio.get_event_loop()
 loop.create_task(run_state_machine())    # FSM for main tasks
