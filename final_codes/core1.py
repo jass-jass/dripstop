@@ -1,7 +1,7 @@
 ### import ###
 from machine import Pin, PWM, I2C
 from micropython import const
-from time
+import time
 from servo_motor import Servos
 from hmi_ui import HMI
 import uasyncio, math, gc
@@ -10,22 +10,22 @@ from hx711 import HX711
 
 
 #######################################################################
-                         ''' Initializations '''
+#                       ''' Initializations '''                       #
 #######################################################################
 ### Protocols ###
 i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
 addr = i2c_device.scan()
 
-### Outputs ###
-#status_led = Pin(, Pin.OUT)
-servo = Servos(i2c, addr[2], freq=50)
-hmi = HMI(i2c, addr[1], addr[0], int_pcf, 101)
-nano = Pin(4, Pin.OUT)
-
 ### Inputs ###
 drip_sensor = Pin(19, Pin.IN)   # square pulse from drops
 int_pcf = Pin(23, Pin.IN)   # interrupt
 load_cell = HX711(d_out = 17, pd_sck = 16, channel = 1)  # channel A gain 128
+
+### Outputs ###
+#status_led = Pin(, Pin.OUT)
+servo = Servos(i2c_device, addr[2], freq=50)
+hmi = HMI(i2c_device, addr[1], addr[0], int_pcf, 101)
+nano = Pin(4, Pin.OUT)
 
 ### Variables ###
 tube_change = 1
@@ -38,14 +38,13 @@ flag_count = 0
 
 ### Constants ###
 # Status LED
-status_power_on = const()
-status_adjust = const()
-status_calibrate = const()
+status_power_on = const(1)
+status_adjust = const(2)
+status_calibrate = const(3)
 
 # Servo motor
 servo_home = 0
 servo_close = 90
-servo_step = 0
 
 # FSM 
 state = None
@@ -57,14 +56,14 @@ state = None
 
 
 #######################################################################
-                             '''ISRs'''
+#                            '''ISRs'''                               #
 #######################################################################
 def isr_hmi(pin):
   global flag_load_cell
   if flag_load_cell:
     state = idle
   else:
-    int_pcf.irq(trigger = 0, handle = None)
+    int_pcf.irq(trigger = 0, handler = None)
     if hmi.button_strt == 0:
       hmi.sr = "edit"
     elif hmi.button_rst == 0:
@@ -84,11 +83,11 @@ def isr_hmi(pin):
 
 
 #######################################################################
-                          '''FUNCTIONS'''
+#                         '''FUNCTIONS'''                             #
 #######################################################################
 ##### Frequency count
 def get_freq() ->float:
-    samples = 5
+    samples = 10
     count = samples + 1
     no_drop = 0
     stream = 0
@@ -115,7 +114,10 @@ def get_freq() ->float:
                 flag = flag - 1
                 temp = read
             if data_size > 12000:
-                if freq_size == 10:
+                '''if freq_size == 10:
+                    lcd.clear()
+                    lcd.putstr("Drip Period:")
+                lcd.move_to(0,1)'''
                 if read:
                     no_drop = no_drop + 1
                 else:
@@ -128,7 +130,13 @@ def get_freq() ->float:
             if flag:
                 data_size = data_size + 1 
             else:
-                t = data_size * 0.25 # sample size * data count
+                t = data_size * 0.25 #/ 1.85
+                '''if freq_size == 10:
+                    lcd.clear()
+                    lcd.putstr("Drip Period:")
+                lcd.move_to(0,1)
+                lcd.putstr(str(t))
+                lcd.putstr(" ms   ")'''
                 freq.append(t) 
                 freq_size = freq_size - 1
                 break
@@ -151,17 +159,16 @@ def control_servo(mark, frequency):
     servo.position(0, degrees = ((angle*103)/90))
     
 ##### Calibrate
-def calibrate(): -> float:
+def calibrate() -> float:
     global servo_close
     servo.position(0, degrees = 0)
-    i = input()
     nano.on()
     servo.position(0, degrees = 78)
     # no needle 77
     # medium needle 82
-    sleep(1)
+    time.sleep(1)
     nano.off()
-    hmi.animate_drops
+    hmi.animate_drops(4, 14, 3)
     i = 0
     while get_freq():
         servo.position(0, degrees = (90+i))
@@ -181,8 +188,6 @@ def hmi_confirm():
   
 def hmi_setup(state, isr):
   global drip_rate
-  #state = hmi.screen_setup
-  #isr = hmi.isr_setup
   while True:
       state()
       hmi.int.irq(trigger = Pin.IRQ_FALLING, handler = isr)
@@ -204,7 +209,7 @@ def hmi_setup(state, isr):
           isr = hmi.isr_confirm
       elif hmi.state == "calibrate":
           state = hmi.screen_calibrate
-          isr = hmi.isr_continue
+          #isr = hmi.isr_continue
       elif hmi.state == "done":
           hmi.screen_display()
           state = hmi.screen_setup
@@ -215,16 +220,20 @@ def hmi_setup(state, isr):
 
 
 #######################################################################
-                            '''STATES'''
+#                           '''STATES'''                              #
 #######################################################################
 ### power on state ###
 async def power_on():
     global state
+    global tube_change
+    hmi.lcd.clear()
+    hmi.lcd.putstr("power_on")
+    time.sleep(1)
     #led_status.value(status_power_on)
     if tube_change:
-        servo.position(servo_home)
+        servo.position(0, servo_home)
         tube_change = 0
-    setup_hmi(hmi.screen_setup, hmi.isr_setup)
+    hmi_setup(hmi.screen_setup, hmi.isr_setup)
     int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
    # await # wait for start button to be pressed
     state = start 
@@ -233,6 +242,11 @@ async def power_on():
 ### start state ###
 async def start():
     global state
+    global drip_rate
+    global volume
+    hmi.lcd.clear()
+    hmi.lcd.putstr("start")
+    time.sleep(1)
     #led_status.value(status_calibrate)
     if (drip_rate - hmi.drip_rate < 0.48) and (volume == hmi.volume):
       state = idle
@@ -246,22 +260,29 @@ async def start():
 async def comp_n_adjust():
     global state
     global drip_rate
+    hmi.lcd.clear()
+    hmi.lcd.putstr("comp_n_adjust")
+    time.sleep(1)
     flag_verify = 0
     while state == comp_n_adjust:
         while True:
-          freq = get_freq()
-          if abs(drip_rate - freq) >= 0.25:
-              control_servo(drip_rate, freq)
-          else:
-              if flag_verify:
-                  break
-              flag_verify = flag_verify + 1
-        return idle
+            hmi.lcd.putstr("comp_n_adjust")
+            freq = get_freq()
+            if abs(drip_rate - freq) >= 0.48:
+                control_servo(drip_rate, freq)
+            else:
+                if flag_verify:
+                    break
+                flag_verify = flag_verify + 1
+        state = idle
             
     
 ### Idle state ###
 async def idle():
     global state
+    hmi.lcd.clear()
+    hmi.lcd.putstr("idle")
+    time.sleep(1)
     while state == idle:
         pass
     
@@ -272,7 +293,7 @@ state = power_on
 async def run_state_machine():
     global state
     while True:
-        state = await state()
+        await state()
 
        
 ### thread safe flag allows interrupts and threads to run along with 
@@ -289,7 +310,7 @@ async def schedule_interrupt():
         await tsf.wait()
 '''
 
-int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+#int_pcf.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
 
 loop = uasyncio.get_event_loop()
 loop.create_task(run_state_machine())    # FSM for main tasks
