@@ -1,10 +1,9 @@
 ### import ###
 from machine import Pin, PWM, I2C
 from micropython import const
-import time
 from servo_motor import Servos
 from hmi_ui import HMI
-import uasyncio, math, gc
+import uasyncio, math, gc, time, core_two, _thread
 from hx711 import HX711
 
 
@@ -85,6 +84,7 @@ def isr_hmi(pin):
     gc.collect()
     loop = uasyncio.new_event_loop()
     loop.create_task(run_state_machine())
+    hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
     
 #######################################################################
 
@@ -149,17 +149,19 @@ def servo_angle(index) -> float:
 def control_servo(mark, frequency):
     # greater the frequency, lesser the angle
     if mark > frequency:
-        angle = (servo_angle(0)) + 1
+        angle = (servo_angle(0)) + 2
     else:
-        angle = (servo_angle(0)) - 1
-    if angle < 97:
-        angle = 98
+        angle = (servo_angle(0)) - 2
+    if angle < 99:
+        angle = 99
     servo.position(0, degrees = ((angle*103)/90))
     
 ##### Calibrate
 def calibrate() -> float:
     global servo_close
-    servo.position(0, degrees = 0)
+    servo.position(0, degrees = servo_close)
+    core_two.calibrate_load = 1
+    hmi.animate_drops(4, 14, 3)
     nano.on()
     servo.position(0, degrees = 78)
     # no needle 77
@@ -248,11 +250,12 @@ async def start():
     hmi.lcd.putstr("start")
     time.sleep(1)
     #led_status.value(status_calibrate)
-    if (drip_rate - hmi.drip_rate < 0.48) and (volume == hmi.volume):
+    if (drip_rate - (hmi.drip_rate/60) < 0.48) and (volume == hmi.volume):
       state = idle
       return
     else:
-      volume = hmi.volume
+      core_two.volume = volume = hmi.volume
+      drip_rate = hmi.drip_rate / 60
       state = comp_n_adjust
     
     
@@ -313,6 +316,7 @@ async def schedule_interrupt():
 
 #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
 
+_thread.start_new_thread(core_two.critical_core, ())
 loop = uasyncio.get_event_loop()
 loop.create_task(run_state_machine())    # FSM for main tasks
 #loop.create_task(schedule_interrupt())   # FSM for interrupts
