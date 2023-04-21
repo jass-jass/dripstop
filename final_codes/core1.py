@@ -28,7 +28,7 @@ nano = Pin(4, Pin.OUT)
 
 ### Variables ###
 tube_change = 1
-drip_rate = 0.0
+drip_rate = 5.0
 volume = 0.0
 
 ### Flags ###
@@ -95,15 +95,13 @@ def isr_hmi(pin):
 #######################################################################
 ##### Frequency count
 def get_freq() ->float:
-    samples = 10
-    count = samples + 1
     no_drop = 0
     stream = 0
     sum_time = 0
     prev_time = 0
     curr_time = 0
     read = 0
-    freq_size = 10
+    freq_size = 5
     freq = []
     while freq_size:
         flag = 1
@@ -140,7 +138,7 @@ def get_freq() ->float:
                 break
     l = sorted(freq)
     period = l[int(len(l)/ 2)]
-    return (1000/period)
+    return (1000/period) 
 
 ##### Servo control
 def servo_angle(index) -> float:
@@ -149,11 +147,11 @@ def servo_angle(index) -> float:
 def control_servo(mark, frequency):
     # greater the frequency, lesser the angle
     if mark > frequency:
-        angle = (servo_angle(0)) + 2
+        angle = (servo_angle(0)) + 3
     else:
-        angle = (servo_angle(0)) - 2
-    if angle < 99:
-        angle = 99
+        angle = (servo_angle(0)) - 3
+    if angle < 102:
+        angle = 102
     servo.position(0, degrees = ((angle*103)/90))
     
 ##### Calibrate
@@ -227,15 +225,16 @@ def hmi_setup(state, isr):
 async def power_on():
     global state
     global tube_change
-    hmi.lcd.clear()
+    '''hmi.lcd.clear()
     hmi.lcd.putstr("power_on")
-    time.sleep(1)
+    time.sleep(1)'''
     #led_status.value(status_power_on)
     if tube_change:
         servo.position(0, servo_home)
         tube_change = 0
     hmi_setup(hmi.screen_setup, hmi.isr_setup)
     hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
+    servo.position(0, servo_close)
     #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
    # await # wait for start button to be pressed
     state = start 
@@ -246,16 +245,16 @@ async def start():
     global state
     global drip_rate
     global volume
-    hmi.lcd.clear()
+    '''hmi.lcd.clear()
     hmi.lcd.putstr("start")
-    time.sleep(1)
+    time.sleep(1)'''
     #led_status.value(status_calibrate)
-    if (drip_rate - (hmi.drip_rate/60) < 0.48) and (volume == hmi.volume):
+    if abs(drip_rate - hmi.drip_rate) < 19.8:
       state = idle
       return
     else:
       core_two.volume = volume = hmi.volume
-      drip_rate = hmi.drip_rate / 60
+      drip_rate = hmi.drip_rate
       state = comp_n_adjust
     
     
@@ -263,15 +262,18 @@ async def start():
 async def comp_n_adjust():
     global state
     global drip_rate
-    hmi.lcd.clear()
+    '''hmi.lcd.clear()
     hmi.lcd.putstr("comp_n_adjust")
-    time.sleep(1)
+    time.sleep(1)'''
     flag_verify = 0
     while state == comp_n_adjust:
         while True:
-            hmi.lcd.putstr("comp_n_adjust")
             freq = get_freq()
-            if abs(drip_rate - freq) >= 0.48:
+            hmi.lcd.clear()
+            hmi.lcd.putstr(str(freq))
+            hmi.lcd.move_to(0,1)
+            hmi.lcd.putstr(str(drip_rate))
+            if abs(drip_rate - freq) >= 19.8:
                 control_servo(drip_rate, freq)
             else:
                 if flag_verify:
@@ -283,11 +285,18 @@ async def comp_n_adjust():
 ### Idle state ###
 async def idle():
     global state
+    '''
     hmi.lcd.clear()
-    hmi.lcd.putstr("idle")
-    time.sleep(1)
+    hmi.lcd.putstr("idle")'''
+    hmi.volume = core_two.volume_left
+    hmi.time_left = hmi.volume / (5.32 * drip_rate)
+    hmi.screen_display()
     while state == idle:
-        pass
+        if hmi.volume - core_two.volume_left > 100:
+            hmi.volume = core_two.volume_left
+            hmi.time_left = hmi.volume / (5.32 * drip_rate)
+            hmi.screen_display()
+        
     
 #######################################################################
 
