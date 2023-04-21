@@ -63,6 +63,6 @@ def critical_core():
                 raw_weight = load_cell.read(raw = False)
                 weight = weight + 1*((raw_weight+81752.99)/217.3966)
         weight = weight / 50
-        volume_left = weight - weight_ref
+        volume_left = abs(weight - weight_ref)
         if volume_left/volume < 0.1:
             ISR_10_percent()
