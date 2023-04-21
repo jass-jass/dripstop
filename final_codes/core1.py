@@ -71,6 +71,7 @@ def isr_hmi(pin):
             hmi.sr = "reset"
             #tube_change = 1
         else:
+            hmi.screen_display()
             hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
             #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
             return
@@ -158,6 +159,7 @@ def control_servo(mark, frequency):
 def calibrate() -> float:
     global servo_close
     servo.position(0, degrees = servo_close)
+    core_two.volume = volume = hmi.volume
     core_two.calibrate_load = 1
     hmi.animate_drops(4, 14, 3)
     nano.on()
@@ -296,6 +298,7 @@ async def idle():
             hmi.volume = core_two.volume_left
             hmi.time_left = hmi.volume / (5.32 * drip_rate)
             hmi.screen_display()
+            #set load cell flag
         
     
 #######################################################################
