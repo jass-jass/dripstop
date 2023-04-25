@@ -3,9 +3,10 @@ from machine import Pin, PWM, I2C
 from micropython import const
 from servo_motor import Servos
 from hmi_ui import HMI
-import uasyncio, math, gc, time, core_two, _thread
+import uasyncio, math, gc, time, core_two, _thread, machine
 from hx711 import HX711
 
+machine.freq(240000000)
 
 
 #######################################################################
@@ -69,18 +70,15 @@ def isr_hmi(pin):
             hmi.sr = "edit"
         elif hmi.pcf.pin(hmi.button_rst) == 0:
             hmi.sr = "reset"
-            #tube_change = 1
+            tube_change = 1
         else:
-            hmi.screen_display()
             hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
-            #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
             return
         y_n = hmi_confirm()
         if y_n:
             return
         hmi.sr = "start"
         state = power_on
-    #(volume xor hmi.volume) or (drip_rate xor hmi.drip_rate):   # data from pcf
     loop.close()
     gc.collect()
     loop = uasyncio.new_event_loop()
@@ -139,7 +137,7 @@ def get_freq() ->float:
                 break
     l = sorted(freq)
     period = l[int(len(l)/ 2)]
-    return (1000/period) 
+    return (6000/period) 
 
 ##### Servo control
 def servo_angle(index) -> float:
@@ -148,9 +146,9 @@ def servo_angle(index) -> float:
 def control_servo(mark, frequency):
     # greater the frequency, lesser the angle
     if mark > frequency:
-        angle = (servo_angle(0)) + 3
+        angle = (servo_angle(0)) + 1
     else:
-        angle = (servo_angle(0)) - 3
+        angle = (servo_angle(0)) - 1
     if angle < 102:
         angle = 102
     servo.position(0, degrees = ((angle*103)/90))
@@ -159,7 +157,6 @@ def control_servo(mark, frequency):
 def calibrate() -> float:
     global servo_close
     servo.position(0, degrees = servo_close)
-    core_two.volume = volume = hmi.volume
     core_two.calibrate_load = 1
     hmi.animate_drops(4, 14, 3)
     nano.on()
@@ -195,6 +192,7 @@ def hmi_setup(state, isr):
       if hmi.state == "calibrate":
           drip_rate = calibrate()
           hmi.flag_irq = 1
+          hmi.state = "setup"
       while True:
           if hmi.flag_irq:
               hmi.int.irq(handler = None, trigger = 0)
@@ -210,7 +208,6 @@ def hmi_setup(state, isr):
           isr = hmi.isr_confirm
       elif hmi.state == "calibrate":
           state = hmi.screen_calibrate
-          #isr = hmi.isr_continue
       elif hmi.state == "done":
           hmi.screen_display()
           state = hmi.screen_setup
@@ -239,7 +236,7 @@ async def power_on():
     servo.position(0, servo_close)
     #hmi.int.irq(trigger = Pin.IRQ_RISING, handler = set_tsf)
    # await # wait for start button to be pressed
-    state = start 
+    state = start
     
     
 ### start state ###
@@ -271,10 +268,12 @@ async def comp_n_adjust():
     while state == comp_n_adjust:
         while True:
             freq = get_freq()
+            
             hmi.lcd.clear()
             hmi.lcd.putstr(str(freq))
             hmi.lcd.move_to(0,1)
             hmi.lcd.putstr(str(drip_rate))
+            
             if abs(drip_rate - freq) >= 19.8:
                 control_servo(drip_rate, freq)
             else:
@@ -298,7 +297,6 @@ async def idle():
             hmi.volume = core_two.volume_left
             hmi.time_left = hmi.volume / (5.32 * drip_rate)
             hmi.screen_display()
-            #set load cell flag
         
     
 #######################################################################
@@ -316,11 +314,9 @@ async def run_state_machine():
 
 '''
 tsf = uasyncio.ThreadSafeFlag()
-
 def set_tsf(_):
     tsf.set()
     isr_hmi(1)
-
 async def schedule_interrupt():
     while True:
         await tsf.wait()
