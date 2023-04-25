@@ -19,7 +19,7 @@ class HMI(I2cLcd):
     
     def __init__(self, i2c, addr_lcd, addr_pcf, int_pcf, id_dev):
         self.lcd = I2cLcd(i2c, addr_lcd, self.totalRows, self.totalColumns)
-        self.volume = 0.0
+        self.volume = 500
         self.drip_rate = 5
         self.id = id_dev
         self.consumed = 0
@@ -37,18 +37,6 @@ class HMI(I2cLcd):
         self.button_strt = 6
         self.button_rst = 7
     
-    '''
-    def poll():
-        for i in range(8):
-            temp = pcf.pin(i)
-            print(temp)
-            arr.append(temp)
-            if temp:
-                ones = ones + 1
-        if ones != 7:
-            return
-        data = arr
-    '''
     
     def isr_setup(self, pin):
         if self.pcf.pin(self.button_dwn)==0:
@@ -66,7 +54,7 @@ class HMI(I2cLcd):
         elif self.pcf.pin(self.button_inc)==0:
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
-                self.volume = self.volume + 0.1
+                self.volume = self.volume + 100
                 self.lcd.putstr(str(round(self.volume, 2)))
             elif self.parameter == "rate":
                 self.lcd.move_to(10, 3)
@@ -75,7 +63,7 @@ class HMI(I2cLcd):
         elif self.pcf.pin(self.button_dec)==0:
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
-                self.volume = self.volume - 0.1
+                self.volume = self.volume - 100
                 if self.volume < 0.0:
                     self.volume = 0.0
                 self.lcd.putstr(str(round(self.volume, 2)))
@@ -128,8 +116,8 @@ class HMI(I2cLcd):
         self.lcd.putstr("Calibrate")
         self.lcd.move_to(0, 2)
         self.lcd.putstr(("Volume "+str(self.volume)))
-        self.lcd.move_to(19, 2)
-        self.lcd.putstr("L")
+        self.lcd.move_to(18, 2)
+        self.lcd.putstr("mL")
         self.lcd.move_to(0, 3)
         self.lcd.putstr(("Drop rate "+str(self.drip_rate)))
         self.lcd.move_to(16, 3)
@@ -168,10 +156,12 @@ class HMI(I2cLcd):
         self.lcd.putstr(("Consumed "+str(self.consumed)+" %"))
         self.lcd.move_to(0, 1)
         self.lcd.putstr(("Time left "+str(self.time_left)))
+        self.lcd.move_to(18, 1)
+        self.lcd.putstr("hr")
         self.lcd.move_to(0, 2)
         self.lcd.putstr(("Volume "+str(self.volume)))
-        self.lcd.move_to(19, 2)
-        self.lcd.putstr("L")
+        self.lcd.move_to(18, 2)
+        self.lcd.putstr("mL")
         self.lcd.move_to(0, 3)
         self.lcd.putstr(("Drop rate "+str(self.drip_rate)))
         self.lcd.move_to(16, 3)
