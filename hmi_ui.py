@@ -54,7 +54,7 @@ class HMI(I2cLcd):
         elif self.pcf.pin(self.button_inc)==0:
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
-                self.volume = self.volume + 100
+                self.volume = self.volume + 50
                 self.lcd.putstr(str(round(self.volume, 2)))
             elif self.parameter == "rate":
                 self.lcd.move_to(10, 3)
@@ -63,7 +63,7 @@ class HMI(I2cLcd):
         elif self.pcf.pin(self.button_dec)==0:
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
-                self.volume = self.volume - 100
+                self.volume = self.volume - 50
                 if self.volume < 100.0:
                     self.volume = 100
                 self.lcd.putstr(str(round(self.volume, 2)))
