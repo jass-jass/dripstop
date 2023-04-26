@@ -18,13 +18,15 @@ addr = i2c_device.scan()
 ### Inputs ###
 drip_sensor = Pin(19, Pin.IN)   # square pulse from drops
 int_pcf = Pin(23, Pin.IN)   # interrupt
-#load_cell = HX711(d_out = 17, pd_sck = 16, channel = 1)  # channel A gain 128
+load_cell = HX711(d_out = 16, pd_sck = 17, channel = 1)
 
 ### Outputs ###
 #status_led = Pin(, Pin.OUT)
 servo = Servos(i2c_device, addr[2], freq=50)
 hmi = HMI(i2c_device, addr[1], addr[0], int_pcf, 101)
 nano = Pin(4, Pin.OUT)
+buzzer = Pin(18, Pin.OUT)
+timer_10_sec = Timer(1)
 
 ### Variables ###
 tube_change = 1
@@ -32,11 +34,18 @@ drip_rate = 5.0
 volume = 0.0
 # Servo motor
 servo_home = 0
-servo_close = 90
+servo_close = 102
 
 ### Flags ###
 flag_load_cell = 0
 flag_count = 0
+
+
+###### CORE TWO ######
+core_two_calibrate_load = 0
+core_two_volume = 500
+core_two_volume_left = 500
+core_two_flag = 1
 
 #######################################################################
 
@@ -45,22 +54,6 @@ flag_count = 0
 #######################################################################
 #                         '''Core Two'''                              #
 #######################################################################
-#i2c_device = I2C(0, scl = Pin(22), sda = Pin(21))
-#addr = i2c_device.scan()
-# Inputs
-load_cell = HX711(d_out = 16, pd_sck = 17, channel = 1)
-# Outputs
-buzzer = Pin(18, Pin.OUT)
-timer_10_sec = Timer(1)
-#servo = Servos(i2c_device, addr[2], freq=50)
-
-### Variables for pin status of pins ###
-# shared for both core functions
-core_two_calibrate_load = 0
-core_two_volume = 500
-core_two_volume_left = 500
-core_two_flag = 1
-
 ######## Timer Interrupt handler #######
 def ISR_Timer(arg):
     timer_10_sec.deinit()      # turn off timer
@@ -91,7 +84,6 @@ def calibrate_load():
             weight = weight + 1*((raw_weight+81752.99)/217.3966)
     return weight / 100
 
-#lcd = I2cLcd(i2c_device, addr[1], 4, 20)
 
 def critical_core():
     global core_two_calibrate_load
@@ -110,23 +102,8 @@ def critical_core():
                 weight = weight + 1*((raw_weight+81752.99)/217.3966)
         weight = weight / 50
         core_two_volume_left = abs(weight - weight_ref)
-        
-        '''
-        lcd.clear()
-        lcd.putstr(str(weight_ref))
-        lcd.move_to(0,1)
-        lcd.putstr(str(weight))
-        lcd.move_to(0,2)
-        lcd.putstr(str(volume_left))
-        t = time.ticks_ms()
-        while time.ticks_ms() - t < 300:
-            pass
-        '''
-        
-        if core_two_volume_left/core_two_volume < 0.1:
+        if core_two_volume_left/core_two_volume < 0.8:
             ISR_10_percent()
-    while True:
-        pass
 
 
 #######################################################################
@@ -316,7 +293,7 @@ def start():
     '''hmi.lcd.clear()
     hmi.lcd.putstr("start")
     time.sleep(1)'''
-    if abs(drip_rate - hmi.drip_rate) < 40:
+    if abs(drip_rate - hmi.drip_rate)/drip_rate < 0.3:
       return
     else:
       core_two_volume = volume = hmi.volume
@@ -336,7 +313,7 @@ def comp_n_adjust():
         hmi.lcd.putstr(str(freq))
         hmi.lcd.move_to(0,1)
         hmi.lcd.putstr(str(drip_rate))
-        if abs(drip_rate - freq) >= 40:
+        if abs(drip_rate - freq)/drip_rate >= 0.3:
             control_servo(drip_rate, freq)
         else:
             if flag_verify:
