@@ -62,7 +62,7 @@ def ISR_Timer(arg):
 ### Interrupt handler for 10% weight ###
 def ISR_10_percent():
     global core_two_flag
-    timer_10_sec.init(period = 10000, mode = Timer.ONE_SHOT, callback = ISR_Timer)
+    timer_10_sec.init(period = 13000, mode = Timer.ONE_SHOT, callback = ISR_Timer)
     buzzer.on()
     t = time.ticks_ms()
     while time.ticks_ms() - t < 700:
@@ -102,7 +102,7 @@ def critical_core():
                 weight = weight + 1*((raw_weight+81752.99)/217.3966)
         weight = weight / 50
         core_two_volume_left = abs(weight - weight_ref)
-        if core_two_volume_left/core_two_volume < 0.8:
+        if core_two_volume_left/core_two_volume < 0.9:
             ISR_10_percent()
 
 
