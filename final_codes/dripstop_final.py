@@ -102,7 +102,7 @@ def critical_core():
                 weight = weight + 1*((raw_weight+81752.99)/217.3966)
         weight = weight / 50
         core_two_volume_left = abs(weight - weight_ref)
-        if core_two_volume_left/core_two_volume < 0.9:
+        if core_two_volume_left/core_two_volume < 0.1:
             ISR_10_percent()
 
 
@@ -124,7 +124,6 @@ def isr_hmi(pin):
             hmi.sr = "edit"
         elif hmi.pcf.pin(hmi.button_rst) == 0:
             hmi.sr = "reset"
-            #tube_change = 1
         else:
             hmi.screen_display()
             hmi.int.irq(trigger = Pin.IRQ_RISING, handler = isr_hmi)
@@ -257,7 +256,6 @@ def hmi_setup(state, isr):
           isr = hmi.isr_confirm
       elif hmi.state == "calibrate":
           state = hmi.screen_calibrate
-          #isr = hmi.isr_continue
       elif hmi.state == "done":
           hmi.screen_display()
           state = hmi.screen_setup
@@ -324,14 +322,15 @@ def comp_n_adjust():
 ### Idle state ###
 def idle():
     global core_two_volume_left
+    global drip_rate
     hmi.volume = core_two_volume_left
-    hmi.time_left = hmi.volume / (5.32 * drip_rate)
+    hmi.time_left = (hmi.volume * 5.32) /  drip_rate
     hmi.screen_display()
     while True:
         if hmi.volume - core_two_volume_left > 5:
             hmi.consumed = (core_two_volume - core_two_volume_left) * 100 / core_two_volume
             hmi.volume = core_two_volume_left
-            hmi.time_left = hmi.volume / (5.32 * drip_rate)
+            hmi.time_left = (hmi.volume * 5.32) / drip_rate
             hmi.screen_display()
 
 #######################################################################
