@@ -64,8 +64,8 @@ class HMI(I2cLcd):
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
                 self.volume = self.volume - 100
-                if self.volume < 0.0:
-                    self.volume = 0.0
+                if self.volume < 100.0:
+                    self.volume = 100
                 self.lcd.putstr(str(round(self.volume, 2)))
             elif self.parameter == "rate":
                 self.lcd.move_to(10, 3)
