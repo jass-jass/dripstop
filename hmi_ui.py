@@ -83,11 +83,9 @@ class HMI(I2cLcd):
     def isr_confirm(self, pin):
         if self.pcf.pin(self.button_dec) == 0: # or self.pcf.pin(self.button_up) ==0:
             self.lcd.move_to(1,3)
-            #print("yes")
             self.state = "done"
         elif self.pcf.pin(self.button_inc) == 0: #or self.pcf.pin(self.button_dwn) ==0:
             self.lcd.move_to(17,3)
-            #print("no")
             self.state = "setup"
         elif self.pcf.pin(self.button_sel)==0:
             self.flag_irq = 1
@@ -153,13 +151,13 @@ class HMI(I2cLcd):
         self.screen_blank()
         self.lcd.hide_cursor()
         self.lcd.move_to(0, 0)
-        self.lcd.putstr(("Consumed "+str(self.consumed)+" %"))
+        self.lcd.putstr(("Consumed "+str(int(self.consumed))+" %"))
         self.lcd.move_to(0, 1)
-        self.lcd.putstr(("Time left "+str(self.time_left)))
+        self.lcd.putstr(("Time left "+str(round(self.time_left, 1))))
         self.lcd.move_to(18, 1)
         self.lcd.putstr("hr")
         self.lcd.move_to(0, 2)
-        self.lcd.putstr(("Volume "+str(self.volume)))
+        self.lcd.putstr(("Volume "+str(round(self.volume, 2))))
         self.lcd.move_to(18, 2)
         self.lcd.putstr("mL")
         self.lcd.move_to(0, 3)
