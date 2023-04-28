@@ -8,7 +8,7 @@ class HMI(I2cLcd):
     
     totalRows = 4
     totalColumns = 20
-    params = "calibrate", "volume", "rate"
+    params = "calibrate", "drop_factor", "volume", "rate"
     parameter = params[0]
     state = "setup"
     sr = "start"
@@ -20,10 +20,11 @@ class HMI(I2cLcd):
     def __init__(self, i2c, addr_lcd, addr_pcf, int_pcf, id_dev):
         self.lcd = I2cLcd(i2c, addr_lcd, self.totalRows, self.totalColumns)
         self.volume = 500
+        self.drop_factor = 5.3
         self.drip_rate = 5
         self.id = id_dev
         self.consumed = 0
-        self.time_left = -1
+        self.time_left = 0.0
         self.lcd.custom_char(1, [ 0x04,0x0E,0x0E,0x1F,0x1F,0x1F,0x0E,0x00])
         ###                            ###
         self.pcf = pcf8574.PCF8574(i2c, addr_pcf)
@@ -44,14 +45,15 @@ class HMI(I2cLcd):
             if self.cursor[1] > 3:
                 self.cursor[1] = 3
             self.lcd.move_to(self.cursor[0], self.cursor[1])
-            self.parameter = self.params[(self.cursor[1]-1)]
+            self.parameter = self.params[(self.cursor[1])]
         if self.pcf.pin(self.button_up)==0:
             self.cursor[1] = self.cursor[1] - 1
-            if self.cursor[1] < 1:
-                self.cursor[1] = 1
+            if self.cursor[1] < 0:
+                self.cursor[1] = 0
             self.lcd.move_to(self.cursor[0], self.cursor[1])
-            self.parameter = self.params[(self.cursor[1]-1)]
+            self.parameter = self.params[(self.cursor[1])]
         elif self.pcf.pin(self.button_inc)==0:
+            if self.
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
                 self.volume = self.volume + 50
@@ -81,10 +83,10 @@ class HMI(I2cLcd):
             self.flag_irq = 1
     
     def isr_confirm(self, pin):
-        if self.pcf.pin(self.button_dec) == 0: # or self.pcf.pin(self.button_up) ==0:
+        if self.pcf.pin(self.button_dec) == 0:
             self.lcd.move_to(1,3)
             self.state = "done"
-        elif self.pcf.pin(self.button_inc) == 0: #or self.pcf.pin(self.button_dwn) ==0:
+        elif self.pcf.pin(self.button_inc) == 0:
             self.lcd.move_to(17,3)
             self.state = "setup"
         elif self.pcf.pin(self.button_sel)==0:
@@ -109,9 +111,11 @@ class HMI(I2cLcd):
     def screen_setup(self):
         self.screen_blank()
         self.lcd.move_to(0, 0)
-        self.lcd.putstr("Specs:")
-        self.lcd.move_to(0, 1)
         self.lcd.putstr("Calibrate")
+        self.lcd.move_to(0, 1)
+        self.lcd.putstr("Drop factor "+str(self.drop_rate))
+        self.lcd.move_to(15, 1)
+        self.lcd.putstr("dp/ml")
         self.lcd.move_to(0, 2)
         self.lcd.putstr(("Volume "+str(self.volume)))
         self.lcd.move_to(18, 2)
@@ -153,9 +157,9 @@ class HMI(I2cLcd):
         self.lcd.move_to(0, 0)
         self.lcd.putstr(("Consumed "+str(int(self.consumed))+" %"))
         self.lcd.move_to(0, 1)
-        self.lcd.putstr(("Time left "+str(round(self.time_left, 1))))
-        self.lcd.move_to(18, 1)
-        self.lcd.putstr("hr")
+        self.lcd.putstr(("Time left "+ str(round(self.time_left, 1))))
+        self.lcd.move_to(17, 1)
+        self.lcd.putstr("min")
         self.lcd.move_to(0, 2)
         self.lcd.putstr(("Volume "+str(round(self.volume, 2))))
         self.lcd.move_to(18, 2)
