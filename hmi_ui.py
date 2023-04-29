@@ -21,7 +21,7 @@ class HMI(I2cLcd):
         self.lcd = I2cLcd(i2c, addr_lcd, self.totalRows, self.totalColumns)
         self.volume = 500
         self.drop_factor = 5.3
-        self.drip_rate = 5
+        self.drip_rate = 5.0
         self.id = id_dev
         self.consumed = 0
         self.time_left = 0.0
@@ -53,7 +53,10 @@ class HMI(I2cLcd):
             self.lcd.move_to(self.cursor[0], self.cursor[1])
             self.parameter = self.params[(self.cursor[1])]
         elif self.pcf.pin(self.button_inc)==0:
-            if self.
+            if self.parameter == "drop_factor":
+                self.lcd.move_to(12, 1)
+                self.drop_factor = self.drop_factor + 0.1
+                self.lcd.putstr(str(round(self.drop_factor, 2)))
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
                 self.volume = self.volume + 50
@@ -63,6 +66,12 @@ class HMI(I2cLcd):
                 self.drip_rate = self.drip_rate + 5
                 self.lcd.putstr(str(self.drip_rate))
         elif self.pcf.pin(self.button_dec)==0:
+            if self.parameter == "drop_factor":
+                self.lcd.move_to(12, 1)
+                self.drop_factor = self.drop_factor - 0.1
+                if self.drop_factor < 0.1:
+                    self.drop_factor = 0.1
+                self.lcd.putstr(str(round(self.drop_factor, 2)))
             if self.parameter == "volume":
                 self.lcd.move_to(7, 2)
                 self.volume = self.volume - 50
