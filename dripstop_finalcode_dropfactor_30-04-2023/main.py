@@ -102,7 +102,7 @@ def critical_core():
                 weight = weight + 1*((raw_weight+81752.99)/217.3966)
         weight = weight / 50
         core_two_volume_left = abs(weight - weight_ref)
-        if core_two_volume_left/core_two_volume < 0.9:
+        if core_two_volume_left/core_two_volume < 0.1:
             ISR_10_percent()
 
 
