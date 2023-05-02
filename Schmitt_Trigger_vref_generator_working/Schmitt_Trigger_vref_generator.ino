@@ -7,7 +7,7 @@ Adafruit_MCP4725 dac;
 
 #define DAC_RESOLUTION (9)
 
-const int inputPin = 7;
+
 bool state= true;
 float myArray[200];
   int i;
