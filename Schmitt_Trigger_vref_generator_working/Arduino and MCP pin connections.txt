@@ -1,6 +1,6 @@
-pin 7 (Input) - Comparator Output to Arduino Input
-I2C - SCL & SDA to MCP 4725
-A0 - Analog pin to LDR
+Nano pin 7 (Input) - Comparator Output to Arduino Input
+Nano I2C - SCL & SDA to MCP 4725
+Nano A0 - Analog pin to LDR
 DAC_RESOLUTION (9)
 I2C Address - 0x60
 
